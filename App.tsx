@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Editor } from './components/Editor';
@@ -352,7 +351,7 @@ const App: React.FC = () => {
 
     if (isLoadingCloud) {
         return (
-            <div className="flex h-screen w-screen bg-background items-center justify-center flex-col gap-4">
+            <div className="flex h-screen h-[100dvh] w-screen bg-background items-center justify-center flex-col gap-4">
                 <Loader2 size={40} className="animate-spin text-accent" />
                 <div className="text-zinc-400 text-sm">Загрузка ваших заметок...</div>
             </div>
@@ -360,7 +359,7 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className="flex h-screen w-screen bg-transparent text-zinc-100 overflow-hidden font-sans relative">
+        <div className="flex h-screen h-[100dvh] w-screen bg-transparent text-zinc-100 overflow-hidden font-sans relative">
             <Sidebar 
                 notes={notes}
                 folders={folders}

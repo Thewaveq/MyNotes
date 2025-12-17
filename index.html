@@ -2,7 +2,8 @@
 <html lang="ru" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- interactive-widget=resizes-content forces the viewport to shrink when keyboard opens -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
     <title>AI Text Editor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -22,6 +23,9 @@
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
                         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+                    },
+                    screens: {
+                        'xs': '380px',
                     }
                 }
             }
@@ -29,50 +33,40 @@
     </script>
     <style>
         body {
-            /* Fallback background */
             background-color: #09090b;
             color: #fafafa;
+            /* Use dvh to account for mobile address bars */
             height: 100vh;
+            height: 100dvh; 
             overflow: hidden;
             position: relative;
         }
 
-        /* 
-           LAYER 1: The Ambient Gradient 
-           Using a real div instead of body::before guarantees visibility 
-        */
         #ambient-background {
             position: fixed;
             inset: 0;
             width: 100vw;
             height: 100vh;
-            z-index: 0; /* Behind content */
+            height: 100dvh;
+            z-index: 0;
             pointer-events: none;
             background: 
-                /* 1. Main top center glow (Darkened further to #121215) */
                 radial-gradient(circle at 50% 0%, #121215 0%, transparent 50%),
-                /* 2. Very subtle blue accent on the right for depth (Reduced opacity to 0.02) */
                 radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.02) 0%, transparent 30%),
-                /* 3. Base darkness */
                 linear-gradient(to bottom, #09090b 0%, #09090b 100%);
         }
 
-        /* 
-           LAYER 2: The Noise 
-           Reduced opacity to 0.015 to be barely perceptible
-        */
         #noise-overlay {
             position: fixed;
             inset: 0;
             width: 100%;
             height: 100%;
-            z-index: 1; /* On top of gradient, behind content */
+            z-index: 1;
             pointer-events: none;
             opacity: 0.015;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
         
-        /* Sleek Thin Scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -96,7 +90,6 @@
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
         
-        /* Utility to hide scrollbar */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -105,17 +98,9 @@
             scrollbar-width: none;
         }
         
-        /* Glass morphism utilities */
-        .glass {
-            background: rgba(24, 24, 27, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        
         #root {
             position: relative;
-            z-index: 10; /* Content sits well above background */
+            z-index: 10;
             height: 100%;
         }
     </style>

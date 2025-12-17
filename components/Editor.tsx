@@ -630,9 +630,9 @@ export const Editor: React.FC<EditorProps> = ({
         <button 
             onMouseDown={(e) => e.preventDefault()}
             onClick={onClick}
-            className={`p-2.5 rounded-xl transition-all active:scale-95 ${active ? 'bg-accent/20 text-accent' : 'text-zinc-400 hover:text-white hover:bg-white/10'}`}
+            className={`p-1.5 md:p-2.5 rounded-xl transition-all active:scale-95 ${active ? 'bg-accent/20 text-accent' : 'text-zinc-400 hover:text-white hover:bg-white/10'}`}
         >
-            <Icon size={20} />
+            <Icon size={18} className="md:w-5 md:h-5" />
         </button>
     );
 
@@ -653,24 +653,24 @@ export const Editor: React.FC<EditorProps> = ({
     return (
         <div className={`flex-1 flex flex-col h-full relative bg-transparent min-w-0 ${className}`}>
             {/* Top Toolbar */}
-            <div className="h-16 flex items-center justify-between px-6 z-20 shrink-0 sticky top-0 transition-all duration-300">
-                <div className="flex items-center gap-4 flex-1 mr-4 overflow-hidden">
+            <div className="h-14 md:h-16 flex items-center justify-between px-3 md:px-6 z-20 shrink-0 sticky top-0 transition-all duration-300 bg-background/80 backdrop-blur-md md:bg-transparent">
+                <div className="flex items-center gap-3 md:gap-4 flex-1 mr-4 overflow-hidden">
                     <button onClick={onBack} className="md:hidden p-2 -ml-2 text-zinc-400 hover:text-white transition-colors rounded-full hover:bg-white/5">
                         <ChevronLeft size={24} />
                     </button>
-                    {getIcon()}
+                    <div className="hidden md:block">{getIcon()}</div>
                     <input 
-                        className="bg-transparent text-xl md:text-2xl font-bold text-white focus:outline-none placeholder-zinc-700 w-full truncate font-sans tracking-tight"
+                        className="bg-transparent text-lg md:text-2xl font-bold text-white focus:outline-none placeholder-zinc-700 w-full truncate font-sans tracking-tight"
                         value={note.title || ''}
                         onChange={(e) => onUpdateNote(note.id, { title: e.target.value })}
                         placeholder="Без названия"
                     />
                 </div>
                 <div className="flex items-center gap-1">
-                     <button onClick={handleManualSave} className="p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all" title="Сохранить">
+                     <button onClick={handleManualSave} className="p-2 md:p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all" title="Сохранить">
                         {saving ? <Loader2 size={20} className="animate-spin text-green-500" /> : <Save size={20} />}
                     </button>
-                    <button onClick={handleDownload} className="p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all" title="Скачать">
+                    <button onClick={handleDownload} className="p-2 md:p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all" title="Скачать">
                         <Download size={20} />
                     </button>
                 </div>
@@ -707,10 +707,10 @@ export const Editor: React.FC<EditorProps> = ({
                         onInput={handleInput}
                         onKeyDown={handleKeyDown}
                         onClick={handleEditorClick}
-                        className="flex-1 w-full max-w-3xl mx-auto p-6 md:p-8 pb-32 overflow-y-auto focus:outline-none text-zinc-300 leading-relaxed text-lg font-serif outline-none no-scrollbar
-                        [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-8 [&_h1]:mb-4 [&_h1]:tracking-tight
-                        [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-zinc-100 [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:tracking-tight
-                        [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-zinc-200 [&_h3]:mt-4 [&_h3]:mb-2
+                        className="flex-1 w-full max-w-3xl mx-auto p-4 md:p-8 pb-32 overflow-y-auto focus:outline-none text-zinc-300 leading-relaxed text-base md:text-lg font-serif outline-none no-scrollbar
+                        [&_h1]:text-2xl md:[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-8 [&_h1]:mb-4 [&_h1]:tracking-tight
+                        [&_h2]:text-xl md:[&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-zinc-100 [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:tracking-tight
+                        [&_h3]:text-lg md:[&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-zinc-200 [&_h3]:mt-4 [&_h3]:mb-2
                         [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ul]:text-zinc-300
                         [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_ol]:text-zinc-300
                         [&_li]:my-1 [&_li]:pl-1
@@ -821,39 +821,39 @@ export const Editor: React.FC<EditorProps> = ({
                 )}
 
                 {/* Bottom Floating Toolbar */}
-                <div className="absolute bottom-6 left-0 right-0 px-4 z-30 flex justify-center pointer-events-none">
-                    <div className="bg-zinc-900/80 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 rounded-2xl p-1.5 flex items-center gap-1 max-w-full overflow-x-auto no-scrollbar pointer-events-auto">
+                <div className="fixed md:absolute bottom-0 md:bottom-6 left-0 right-0 px-2 md:px-4 z-30 flex justify-center pointer-events-none pb-safe">
+                    <div className="bg-zinc-900/90 backdrop-blur-xl border-t md:border border-white/10 shadow-2xl shadow-black/50 md:rounded-2xl rounded-t-2xl p-2 md:p-1.5 flex items-center gap-2 md:gap-1 max-w-full overflow-x-auto no-scrollbar pointer-events-auto snap-x snap-mandatory w-full md:w-auto">
                         
-                        <div className="flex items-center gap-0.5 pr-2 border-r border-white/10">
+                        <div className="flex items-center gap-1 md:gap-0.5 pr-2 border-r border-white/10 shrink-0 snap-center">
                             <ToolbarBtn icon={Bold} onClick={() => execFormat('bold')} />
                             <ToolbarBtn icon={Italic} onClick={() => execFormat('italic')} />
                             <ToolbarBtn icon={Underline} onClick={() => execFormat('underline')} />
                             <ToolbarBtn icon={Strikethrough} onClick={() => execFormat('strikeThrough')} />
                         </div>
 
-                        <div className="flex items-center gap-0.5 px-2 border-r border-white/10">
+                        <div className="flex items-center gap-1 md:gap-0.5 px-2 border-r border-white/10 shrink-0 snap-center">
                             <ToolbarBtn icon={List} onClick={() => execFormat('insertUnorderedList')} />
                             <ToolbarBtn icon={SquareCheck} onClick={() => insertCheckbox()} />
                         </div>
 
-                        <div className="px-2">
+                        <div className="px-2 shrink-0 snap-center">
                             <button 
                                 onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => setShowColorPicker(!showColorPicker)}
-                                className={`w-9 h-9 rounded-xl border transition-all flex items-center justify-center ${showColorPicker ? 'border-white bg-white/10' : 'border-transparent hover:bg-white/5'}`}
+                                className={`w-8 h-8 md:w-9 md:h-9 rounded-xl border transition-all flex items-center justify-center ${showColorPicker ? 'border-white bg-white/10' : 'border-transparent hover:bg-white/5'}`}
                             >
-                                <div className="w-5 h-5 rounded-full" style={{ background: 'linear-gradient(135deg, #f87171, #60a5fa)' }}></div>
+                                <div className="w-4 h-4 md:w-5 md:h-5 rounded-full" style={{ background: 'linear-gradient(135deg, #f87171, #60a5fa)' }}></div>
                             </button>
                         </div>
 
-                        <div className="pl-1">
+                        <div className="pl-1 shrink-0 snap-center">
                             <button 
                                 onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => setAiMenuPos({ top: window.innerHeight / 2 - 150, left: window.innerWidth / 2 - 128 })}
-                                className="w-9 h-9 rounded-xl bg-white text-black shadow-lg hover:shadow-white/20 hover:scale-105 transition-all active:scale-95 flex items-center justify-center"
+                                className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-white text-black shadow-lg hover:shadow-white/20 hover:scale-105 transition-all active:scale-95 flex items-center justify-center"
                                 title="AI Помощник"
                             >
-                                <Sparkles size={18} className="text-black fill-black" />
+                                <Sparkles size={16} className="text-black fill-black md:w-[18px] md:h-[18px]" />
                             </button>
                         </div>
 

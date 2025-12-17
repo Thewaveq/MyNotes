@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Key, User, Upload, Download, Smartphone, Layout, LogOut, RefreshCcw, Server, Box, Plus, Trash2, Check, ChevronLeft, Save } from 'lucide-react';
+import { X, Key, User, Upload, Download, Smartphone, Layout, LogOut, RefreshCcw, Server, Box, Plus, Trash2, Check, ChevronLeft, Save, AlertCircle } from 'lucide-react';
 import { AppSettings, UserProfile, AIProvider } from '../types';
 import { getSettings, saveSettings } from '../utils/storage';
 import { supabase, isSupabaseConfigured } from '../utils/supabase';
@@ -135,11 +135,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setLoadingAuth(true);
         setAuthMessage('');
         
+        // Explicitly set the redirect URL to the current window location
+        const redirectUrl = window.location.origin;
+
         const { error } = await supabase.auth.signInWithOtp({
             email,
             options: {
-                // If you deploy to Vercel, change this to your Vercel URL!
-                emailRedirectTo: window.location.origin, 
+                emailRedirectTo: redirectUrl, 
             },
         });
 
@@ -151,7 +153,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setLoadingAuth(false);
     };
 
-    const fetchModels = async () => { /* ... existing fetchModels code ... */ 
+    const fetchModels = async () => { 
         if (!tempProvider) return;
         const apiKey = keysText.split(/[\n,]+/).map(k => k.trim())[0];
         const baseUrl = tempProvider.baseUrl;
@@ -176,6 +178,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             } else { alert('Неизвестный формат ответа от сервера.'); }
         } catch (e: any) { console.error(e); alert(`Ошибка: ${e.message}`); } finally { setIsFetchingModels(false); }
     };
+
+    const isProduction = window.location.hostname !== 'localhost';
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center md:p-4 animate-fade-in" onClick={onClose}>
@@ -270,6 +274,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                             {loadingAuth ? 'Отправка...' : 'Войти по ссылке'}
                                                         </button>
                                                     </form>
+                                                    
+                                                    {isProduction && (
+                                                        <div className="mt-6 p-3 bg-white/5 rounded-lg text-left">
+                                                            <div className="flex items-start gap-2 text-yellow-500 mb-1">
+                                                                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                                                                <span className="text-xs font-bold">Настройка Redirect URL</span>
+                                                            </div>
+                                                            <p className="text-[11px] text-zinc-400 leading-relaxed">
+                                                                Если после входа открывается <b>localhost</b>, добавьте адрес 
+                                                                <span className="text-white bg-white/10 px-1 rounded mx-1 font-mono">{window.location.origin}</span>
+                                                                в <b>Supabase Dashboard &rarr; Authentication &rarr; URL Configuration</b> (Site URL и Redirect URLs).
+                                                            </p>
+                                                        </div>
+                                                    )}
+
                                                     {authMessage && <div className="mt-4 text-sm text-blue-400 p-3 bg-blue-500/10 rounded-lg">{authMessage}</div>}
                                                 </>
                                             )}
