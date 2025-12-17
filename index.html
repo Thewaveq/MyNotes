@@ -32,14 +32,17 @@
         }
     </script>
     <style>
-        body {
+        html, body {
             background-color: #09090b;
             color: #fafafa;
-            /* Use dvh to account for mobile address bars */
-            height: 100vh;
-            height: 100dvh; 
+            /* Force exact viewport height */
+            height: 100%;
+            width: 100%;
             overflow: hidden;
-            position: relative;
+            overscroll-behavior: none; /* Prevents bounce/pull-to-refresh */
+            position: fixed; /* Lock body in place */
+            top: 0;
+            left: 0;
         }
 
         #ambient-background {
@@ -99,9 +102,12 @@
         }
         
         #root {
-            position: relative;
+            position: absolute;
+            inset: 0;
             z-index: 10;
             height: 100%;
+            width: 100%;
+            overflow: hidden;
         }
     </style>
 <script type="importmap">
