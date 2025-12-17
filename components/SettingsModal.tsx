@@ -34,6 +34,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [authMessage, setAuthMessage] = useState('');
     
     const fileInputRef = useRef<HTMLInputElement>(null);
+	
+	// Sync: Load settings from cloud when user logs in
+    useEffect(() => {
+        if (user) {
+            const loadCloudSettings = async () => {
+                const cloudSettings = await db.getUserSettings(user.uid);
+                if (cloudSettings) {
+                    setSettings(prev => ({ ...prev, ...cloudSettings }));
+                    saveSettings(cloudSettings);
+                }
+            };
+            loadCloudSettings();
+        }
+    }, [user]);
 
     // Initialize editing when a provider is selected
     useEffect(() => {
