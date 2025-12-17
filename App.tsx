@@ -20,6 +20,39 @@ const App: React.FC = () => {
     // Auth & Sync State
     const [user, setUser] = useState<UserProfile | null>(null);
     const [isLoadingCloud, setIsLoadingCloud] = useState(false);
+	
+	// Fix for mobile keyboard and viewport height
+    const [viewportHeight, setViewportHeight] = useState(
+        typeof window !== 'undefined' && window.visualViewport 
+            ? window.visualViewport.height 
+            : typeof window !== 'undefined' ? window.innerHeight : 0
+    );
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.visualViewport) {
+                setViewportHeight(window.visualViewport.height);
+                window.scrollTo(0, 0); 
+            } else {
+                setViewportHeight(window.innerHeight);
+            }
+        };
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', handleResize);
+            handleResize();
+        } else {
+            window.addEventListener('resize', handleResize);
+        }
+
+        return () => {
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', handleResize);
+            } else {
+                window.removeEventListener('resize', handleResize);
+            }
+        };
+    }, []);
 
     // Delete Confirmation State
     const [deleteTarget, setDeleteTarget] = useState<{ type: 'note' | 'folder', id: string, name?: string } | null>(null);
@@ -451,7 +484,7 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className="flex h-screen h-[100dvh] w-screen bg-transparent text-zinc-100 overflow-hidden font-sans relative">
+         <div className="flex w-screen bg-transparent text-zinc-100 overflow-hidden font-sans relative" style={{ height: `${viewportHeight}px` }}>
             <Sidebar 
                 notes={notes}
                 folders={folders}
