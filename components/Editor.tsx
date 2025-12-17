@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { 
     Sparkles, Download, Save, Loader2, ChevronLeft, 
@@ -653,7 +654,7 @@ export const Editor: React.FC<EditorProps> = ({
     return (
         <div className={`flex-1 flex flex-col h-full relative bg-transparent min-w-0 overflow-hidden ${className}`}>
             {/* Top Toolbar */}
-            <div className="h-14 md:h-16 flex items-center justify-between px-3 md:px-6 z-20 shrink-0 sticky top-0 transition-all duration-300 bg-background/80 backdrop-blur-md md:bg-transparent">
+            <div className="h-14 md:h-16 flex items-center justify-between px-3 md:px-6 z-20 shrink-0 w-full bg-zinc-950/80 backdrop-blur-md border-b border-white/5 md:bg-transparent md:border-transparent transition-all duration-300">
                 <div className="flex items-center gap-3 md:gap-4 flex-1 mr-4 overflow-hidden">
                     <button onClick={onBack} className="md:hidden p-2 -ml-2 text-zinc-400 hover:text-white transition-colors rounded-full hover:bg-white/5">
                         <ChevronLeft size={24} />
@@ -707,7 +708,7 @@ export const Editor: React.FC<EditorProps> = ({
                         onInput={handleInput}
                         onKeyDown={handleKeyDown}
                         onClick={handleEditorClick}
-                        className="absolute inset-0 p-4 md:p-8 pb-48 overflow-y-auto focus:outline-none text-zinc-300 leading-relaxed text-base md:text-lg font-serif outline-none no-scrollbar
+                        className="absolute inset-0 p-4 md:p-8 pb-48 overflow-y-auto focus:outline-none text-zinc-300 leading-relaxed text-base md:text-lg font-serif outline-none no-scrollbar overscroll-none
                         [&_h1]:text-2xl md:[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-8 [&_h1]:mb-4 [&_h1]:tracking-tight
                         [&_h2]:text-xl md:[&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-zinc-100 [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:tracking-tight
                         [&_h3]:text-lg md:[&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-zinc-200 [&_h3]:mt-4 [&_h3]:mb-2
@@ -823,7 +824,7 @@ export const Editor: React.FC<EditorProps> = ({
                 {/* Bottom Floating Toolbar */}
                 <div 
                     className="absolute left-1/2 -translate-x-1/2 w-[96%] md:w-auto z-30 flex justify-center pointer-events-none transition-all duration-300"
-                    style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom))' }}
+                    style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
                 >
                     <div className="pointer-events-auto bg-zinc-900/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 rounded-2xl p-2 flex items-center gap-2 max-w-full overflow-x-auto no-scrollbar snap-x snap-mandatory">
                         

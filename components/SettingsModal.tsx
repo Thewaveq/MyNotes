@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Key, User, Upload, Download, Smartphone, Layout, LogOut, RefreshCcw, Server, Box, Plus, Trash2, Check, ChevronLeft, Save, AlertCircle } from 'lucide-react';
+import { X, Key, User, Upload, Download, Smartphone, Layout, LogOut, RefreshCcw, Server, Box, Plus, Trash2, Check, ChevronLeft, Save, AlertCircle, Loader2 } from 'lucide-react';
 import { AppSettings, UserProfile, AIProvider } from '../types';
 import { getSettings, saveSettings } from '../utils/storage';
-import { supabase, isSupabaseConfigured } from '../utils/supabase';
+import { supabase, isSupabaseConfigured, db } from '../utils/supabase';
 
 interface SettingsModalProps {
     onClose: () => void;
@@ -18,6 +19,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
     const [settings, setSettings] = useState<AppSettings>(getSettings());
     const [activeTab, setActiveTab] = useState<'general' | 'ai' | 'account'>('account');
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'success'>('idle');
     
     // --- AI Provider Management State ---
     const [editingProviderId, setEditingProviderId] = useState<string | null>(null);
@@ -43,24 +46,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         }
     }, [editingProviderId, settings.providers]);
 
-    const handleSaveGlobal = () => {
-        let updatedProviders = [...settings.providers];
-        if (tempProvider && editingProviderId) {
-            const keys = keysText.split(/[\n,]+/).map(k => k.trim()).filter(k => k.length > 0);
-            updatedProviders = updatedProviders.map(p => 
-                p.id === editingProviderId 
-                ? { ...tempProvider, apiKeys: keys } 
-                : p
-            );
+    const handleSaveGlobal = async () => {
+        setIsSaving(true);
+        try {
+            let updatedProviders = [...settings.providers];
+            if (tempProvider && editingProviderId) {
+                const keys = keysText.split(/[\n,]+/).map(k => k.trim()).filter(k => k.length > 0);
+                updatedProviders = updatedProviders.map(p => 
+                    p.id === editingProviderId 
+                    ? { ...tempProvider, apiKeys: keys } 
+                    : p
+                );
+            }
+
+            const newSettings = {
+                ...settings,
+                providers: updatedProviders
+            };
+
+            // 1. Save locally
+            saveSettings(newSettings);
+            
+            // 2. Save to cloud if user is logged in
+            if (user) {
+                await db.saveUserSettings(newSettings, user.uid);
+            }
+
+            // 3. Update local state
+            setSettings(newSettings);
+            setSaveStatus('success');
+            setTimeout(() => setSaveStatus('idle'), 2000);
+            
+        } catch (e) {
+            console.error("Save failed", e);
+            alert("Ошибка сохранения");
+        } finally {
+            setIsSaving(false);
         }
-
-        const newSettings = {
-            ...settings,
-            providers: updatedProviders
-        };
-
-        saveSettings(newSettings);
-        window.location.reload(); 
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -307,7 +329,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             </div>
                         )}
                     </div>
-                    <div className="p-4 border-t border-white/5 flex justify-end bg-surface pb-safe"><button onClick={handleSaveGlobal} className="w-full md:w-auto px-8 py-3 md:py-2 bg-white text-black rounded-xl md:rounded-lg font-bold text-base md:text-sm hover:bg-zinc-200 transition-colors shadow-lg hover:shadow-white/10 flex items-center justify-center gap-2"><Save size={18} className="md:hidden" /> Сохранить</button></div>
+                    <div className="p-4 border-t border-white/5 flex justify-end bg-surface pb-safe">
+                        <button 
+                            onClick={handleSaveGlobal} 
+                            disabled={isSaving}
+                            className={`w-full md:w-auto px-8 py-3 md:py-2 rounded-xl md:rounded-lg font-bold text-base md:text-sm transition-all shadow-lg flex items-center justify-center gap-2
+                                ${saveStatus === 'success' 
+                                    ? 'bg-green-500 text-white shadow-green-500/20' 
+                                    : 'bg-white text-black hover:bg-zinc-200 hover:shadow-white/10'
+                                }`}
+                        >
+                            {isSaving ? <Loader2 size={18} className="animate-spin" /> : saveStatus === 'success' ? <Check size={18} /> : <Save size={18} className="md:hidden" />} 
+                            {saveStatus === 'success' ? 'Сохранено' : 'Сохранить'}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

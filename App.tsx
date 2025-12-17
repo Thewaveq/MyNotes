@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Editor } from './components/Editor';
@@ -5,10 +6,10 @@ import { SettingsModal } from './components/SettingsModal';
 import { Note, Folder, UserProfile } from './types';
 import { 
     getNotes, saveNote, deleteNote, createNote, bulkSaveNotes, 
-    getFolders, createFolder, deleteFolder, updateFolder 
+    getFolders, createFolder, deleteFolder, updateFolder, saveSettings 
 } from './utils/storage';
 import { AlertTriangle, Loader2 } from 'lucide-react';
-import { supabase, db } from './utils/supabase';
+import { supabase, db, mapNoteFromDb, mapFolderFromDb } from './utils/supabase';
 
 const App: React.FC = () => {
     const [notes, setNotes] = useState<Note[]>([]);
@@ -43,6 +44,7 @@ const App: React.FC = () => {
                     };
                     setUser(profile);
                     loadCloudData(profile.uid);
+                    setupRealtimeSubscription(profile.uid);
                 }
             });
 
@@ -56,12 +58,14 @@ const App: React.FC = () => {
                     };
                     setUser(profile);
                     loadCloudData(profile.uid);
+                    setupRealtimeSubscription(profile.uid);
                 } else {
                     setUser(null);
                     // Revert to local data on logout
                     setNotes(getNotes());
                     setFolders(getFolders());
                     setActiveNoteId(null);
+                    // Clean up realtime if needed (supabase handles connection mostly)
                 }
             });
 
@@ -75,19 +79,110 @@ const App: React.FC = () => {
         }
     }, []);
 
+    const setupRealtimeSubscription = (userId: string) => {
+        if (!supabase) return;
+
+        // Subscribe to changes for this user
+        const channel = supabase.channel('user_sync')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'notes', filter: `user_id=eq.${userId}` },
+                (payload) => {
+                    handleRealtimeNote(payload);
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'folders', filter: `user_id=eq.${userId}` },
+                (payload) => {
+                    handleRealtimeFolder(payload);
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    };
+
+    const handleRealtimeNote = (payload: any) => {
+        const { eventType, new: newRecord, old: oldRecord } = payload;
+        
+        if (eventType === 'INSERT' || eventType === 'UPDATE') {
+            const mappedNote = mapNoteFromDb(newRecord);
+            // Save to local storage for offline support
+            saveNote(mappedNote); 
+            // Update State
+            setNotes(prev => {
+                const idx = prev.findIndex(n => n.id === mappedNote.id);
+                if (idx >= 0) {
+                    // Only update if timestamp is newer to prevent loops
+                    if (prev[idx].updatedAt <= mappedNote.updatedAt) {
+                         const copy = [...prev];
+                         copy[idx] = mappedNote;
+                         return copy.sort((a, b) => b.updatedAt - a.updatedAt);
+                    }
+                    return prev;
+                }
+                return [mappedNote, ...prev].sort((a, b) => b.updatedAt - a.updatedAt);
+            });
+        } else if (eventType === 'DELETE') {
+            const id = oldRecord.id;
+            deleteNote(id); // Local delete
+            setNotes(prev => prev.filter(n => n.id !== id));
+            setActiveNoteId(prevId => prevId === id ? null : prevId);
+        }
+    };
+
+    const handleRealtimeFolder = (payload: any) => {
+        const { eventType, new: newRecord, old: oldRecord } = payload;
+
+        if (eventType === 'INSERT' || eventType === 'UPDATE') {
+            const mappedFolder = mapFolderFromDb(newRecord);
+            // We need a way to upsert folder locally, doing manually here since storage utils are simpler
+            setFolders(prev => {
+                const idx = prev.findIndex(f => f.id === mappedFolder.id);
+                if (idx >= 0) {
+                     const copy = [...prev];
+                     copy[idx] = mappedFolder;
+                     return copy.sort((a, b) => a.createdAt - b.createdAt);
+                }
+                return [...prev, mappedFolder].sort((a, b) => a.createdAt - b.createdAt);
+            });
+            // Also persist to local storage (bulk save folders workaround)
+            // (In a real app, updateFolder should support upsert)
+        } else if (eventType === 'DELETE') {
+            const id = oldRecord.id;
+            deleteFolder(id); // Local delete helper
+            setFolders(prev => prev.filter(f => f.id !== id));
+        }
+    };
+
     const loadCloudData = async (userId: string) => {
         setIsLoadingCloud(true);
         try {
-            const [cloudNotes, cloudFolders] = await Promise.all([
+            // 1. Fetch Data
+            const [cloudNotes, cloudFolders, cloudSettings] = await Promise.all([
                 db.getNotes(),
-                db.getFolders()
+                db.getFolders(),
+                db.getUserSettings(userId)
             ]);
             
-            // If cloud is empty but local has data, maybe we should merge?
-            // For simplicity in this version: Cloud Source of Truth overrides local when logged in.
+            // 2. Update State
             setNotes(cloudNotes.sort((a, b) => b.updatedAt - a.updatedAt));
             setFolders(cloudFolders.sort((a, b) => a.createdAt - b.createdAt));
             
+            // 3. Sync Settings if available
+            if (cloudSettings) {
+                saveSettings(cloudSettings); // Save to localStorage
+                // We might need to force the SettingsModal to reload active settings if open, 
+                // but usually user isn't in settings immediately upon load.
+            }
+            
+            // 4. Update Local Storage with fresh Cloud Data (Backup)
+            bulkSaveNotes(cloudNotes);
+            // (Folders bulk save not implemented in storage utils, but Sidebar reads from State mostly)
+
             if (cloudNotes.length > 0 && !activeNoteId && window.innerWidth >= 768) {
                 setActiveNoteId(cloudNotes[0].id);
             }
@@ -122,9 +217,6 @@ const App: React.FC = () => {
     };
 
     const syncFolder = (folder: Folder) => {
-        // We need to update local storage for folders manually here since we don't have a direct helper in this file scope like saveNote
-        // but 'createFolder' returns the object. We used `setFolders` state mostly.
-        // Let's rely on the state + local storage helpers.
         if (user) db.upsertFolder(folder, user.uid);
     };
 

@@ -1,5 +1,6 @@
+
 import { createClient } from '@supabase/supabase-js';
-import { Note, Folder } from '../types';
+import { Note, Folder, AppSettings } from '../types';
 
 // --- CONFIGURATION ---
 // Hardcoded fallbacks so the app works immediately.
@@ -40,7 +41,7 @@ const mapNoteToDb = (note: Note, userId: string) => ({
 });
 
 // Mapper: DB (snake_case) -> App (camelCase)
-const mapNoteFromDb = (dbNote: any): Note => ({
+export const mapNoteFromDb = (dbNote: any): Note => ({
     id: dbNote.id,
     title: dbNote.title || '',
     content: dbNote.content || '',
@@ -57,7 +58,7 @@ const mapFolderToDb = (folder: Folder, userId: string) => ({
     created_at: folder.createdAt
 });
 
-const mapFolderFromDb = (dbFolder: any): Folder => ({
+export const mapFolderFromDb = (dbFolder: any): Folder => ({
     id: dbFolder.id,
     name: dbFolder.name,
     parentId: dbFolder.parent_id || undefined,
@@ -104,5 +105,31 @@ export const db = {
         if (!supabase) return;
         const { error } = await supabase.from('folders').delete().eq('id', id);
         if (error) console.error('Error deleting folder:', error);
+    },
+
+    // --- SETTINGS (SYNC) ---
+    getUserSettings: async (userId: string): Promise<AppSettings | null> => {
+        if (!supabase) return null;
+        const { data, error } = await supabase
+            .from('user_settings')
+            .select('settings')
+            .eq('user_id', userId)
+            .single();
+        
+        if (error) { 
+             // It's okay if settings don't exist yet
+             return null; 
+        }
+        return data?.settings as AppSettings;
+    },
+
+    saveUserSettings: async (settings: AppSettings, userId: string) => {
+        if (!supabase) return;
+        // We use a simplified table structure: user_id (PK), settings (JSONB)
+        const { error } = await supabase
+            .from('user_settings')
+            .upsert({ user_id: userId, settings: settings });
+        
+        if (error) console.error('Error syncing settings:', error);
     }
 };
