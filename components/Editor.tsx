@@ -821,8 +821,8 @@ export const Editor: React.FC<EditorProps> = ({
                 )}
 
                 {/* Bottom Floating Toolbar */}
-                <div className="fixed md:absolute bottom-0 md:bottom-6 left-0 right-0 px-2 md:px-4 z-30 flex justify-center pointer-events-none pb-safe">
-                    <div className="bg-zinc-900/90 backdrop-blur-xl border-t md:border border-white/10 shadow-2xl shadow-black/50 md:rounded-2xl rounded-t-2xl p-2 md:p-1.5 flex items-center gap-2 md:gap-1 max-w-full overflow-x-auto no-scrollbar pointer-events-auto snap-x snap-mandatory w-full md:w-auto">
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[96%] md:w-auto z-30 flex justify-center pointer-events-none pb-safe">
+                    <div className="pointer-events-auto bg-zinc-900/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 rounded-2xl p-2 flex items-center gap-2 max-w-full overflow-x-auto no-scrollbar snap-x snap-mandatory">
                         
                         <div className="flex items-center gap-1 md:gap-0.5 pr-2 border-r border-white/10 shrink-0 snap-center">
                             <ToolbarBtn icon={Bold} onClick={() => execFormat('bold')} />
