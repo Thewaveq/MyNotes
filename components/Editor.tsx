@@ -707,7 +707,7 @@ export const Editor: React.FC<EditorProps> = ({
                         onInput={handleInput}
                         onKeyDown={handleKeyDown}
                         onClick={handleEditorClick}
-                        className="flex-1 w-full max-w-3xl mx-auto p-4 md:p-8 pb-32 overflow-y-auto focus:outline-none text-zinc-300 leading-relaxed text-base md:text-lg font-serif outline-none no-scrollbar
+                        className="flex-1 w-full max-w-3xl mx-auto p-4 md:p-8 pb-48 overflow-y-auto focus:outline-none text-zinc-300 leading-relaxed text-base md:text-lg font-serif outline-none no-scrollbar
                         [&_h1]:text-2xl md:[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-8 [&_h1]:mb-4 [&_h1]:tracking-tight
                         [&_h2]:text-xl md:[&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-zinc-100 [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:tracking-tight
                         [&_h3]:text-lg md:[&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-zinc-200 [&_h3]:mt-4 [&_h3]:mb-2
@@ -821,7 +821,10 @@ export const Editor: React.FC<EditorProps> = ({
                 )}
 
                 {/* Bottom Floating Toolbar */}
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[96%] md:w-auto z-30 flex justify-center pointer-events-none pb-safe">
+                <div 
+                    className="absolute left-1/2 -translate-x-1/2 w-[96%] md:w-auto z-30 flex justify-center pointer-events-none transition-all duration-300"
+                    style={{ bottom: 'calc(2rem + env(safe-area-inset-bottom))' }}
+                >
                     <div className="pointer-events-auto bg-zinc-900/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 rounded-2xl p-2 flex items-center gap-2 max-w-full overflow-x-auto no-scrollbar snap-x snap-mandatory">
                         
                         <div className="flex items-center gap-1 md:gap-0.5 pr-2 border-r border-white/10 shrink-0 snap-center">
