@@ -734,7 +734,7 @@ export const Editor: React.FC<EditorProps> = ({
                         onInput={handleInput}
                         onKeyDown={handleKeyDown}
                         onClick={handleEditorClick}
-                        className={`h-full p-4 md:p-8 overflow-y-auto focus:outline-none text-zinc-300 leading-normal text-base md:text-lg font-serif outline-none no-scrollbar overscroll-none transition-all duration-500 ease-in-out ${isCentered ? 'max-w-3xl mx-auto border-x border-white/5 bg-black/20' : 'w-full'}
+                        className={`h-full p-4 md:p-8 overflow-y-auto focus:outline-none text-zinc-300 leading-normal text-base md:text-lg font-serif outline-none no-scrollbar overscroll-none mx-auto w-full transition-all duration-500 ease-in-out ${isCentered ? 'max-w-3xl border-x border-white/5 bg-black/20 shadow-2xl' : 'max-w-full border-x border-transparent bg-transparent'}
                         [&_h1]:text-2xl md:[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-8 [&_h1]:mb-4 [&_h1]:tracking-tight
                         [&_h2]:text-xl md:[&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-zinc-100 [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:tracking-tight
                         [&_h3]:text-lg md:[&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-zinc-200 [&_h3]:mt-4 [&_h3]:mb-2
