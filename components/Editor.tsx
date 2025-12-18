@@ -48,6 +48,20 @@ export const Editor: React.FC<EditorProps> = ({
     const [isGenerating, setIsGenerating] = useState(false);
     const [saving, setSaving] = useState(false);
     const [showColorPicker, setShowColorPicker] = useState(false);
+	
+	// State for text width mode (persisted in localStorage)
+    const [isCentered, setIsCentered] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('editorWidth') === 'centered';
+        }
+        return false;
+    });
+
+    const toggleLayout = () => {
+        const newState = !isCentered;
+        setIsCentered(newState);
+        localStorage.setItem('editorWidth', newState ? 'centered' : 'full');
+    };
     
     // Link Menu State
     const [linkMenuState, setLinkMenuState] = useState<LinkMenuState | null>(null);
@@ -575,7 +589,7 @@ export const Editor: React.FC<EditorProps> = ({
                 const chunkText = (chunk as GenerateContentResponse).text;
                 if (chunkText) {
                     accumulatedHTML += chunkText;
-                    const cleanDisplayHTML = accumulatedHTML
+					const cleanDisplayHTML = accumulatedHTML
                         .replace(/\n[ \t]+/g, '\n')
                         .replace(/\n{3,}/g, '\n\n');
                     wrapper.innerHTML = accumulatedHTML;
@@ -671,6 +685,14 @@ export const Editor: React.FC<EditorProps> = ({
                     />
                 </div>
                 <div className="flex items-center gap-1">
+					<button 
+                        onClick={toggleLayout} 
+                        className="hidden md:block p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all" 
+                        title={isCentered ? "На всю ширину" : "Сфокусироваться"}
+                    >
+                        {isCentered ? <Maximize2 size={20} /> : <Minimize2 size={20} />}
+                    </button>
+					
                      <button onClick={handleManualSave} className="p-2 md:p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all" title="Сохранить">
                         {saving ? <Loader2 size={20} className="animate-spin text-green-500" /> : <Save size={20} />}
                     </button>
@@ -711,20 +733,20 @@ export const Editor: React.FC<EditorProps> = ({
                         onInput={handleInput}
                         onKeyDown={handleKeyDown}
                         onClick={handleEditorClick}
-                        className="w-full h-full p-4 md:p-8 overflow-y-auto focus:outline-none text-zinc-300 leading-relaxed text-base md:text-lg font-serif outline-none no-scrollbar overscroll-none
+                        className={`h-full p-4 md:p-8 overflow-y-auto focus:outline-none text-zinc-300 leading-normal text-base md:text-lg font-serif outline-none no-scrollbar overscroll-none transition-all duration-500 ease-in-out ${isCentered ? 'max-w-3xl mx-auto border-x border-white/5 bg-black/20' : 'w-full'}
                         [&_h1]:text-2xl md:[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-8 [&_h1]:mb-4 [&_h1]:tracking-tight
                         [&_h2]:text-xl md:[&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-zinc-100 [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:tracking-tight
                         [&_h3]:text-lg md:[&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-zinc-200 [&_h3]:mt-4 [&_h3]:mb-2
-                        [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ul]:text-zinc-300
-                        [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_ol]:text-zinc-300
-                        [&_li]:my-1 [&_li]:pl-1
+                        [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-0 [&_ul]:text-zinc-300
+                        [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-0 [&_ol]:text-zinc-300
+                        [&_li]:my-0 [&_li]:pl-1
                         [&_p]:mb-0 [&_p]:mt-0
                         [&_blockquote]:border-l-4 [&_blockquote]:border-zinc-700 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-zinc-400 [&_blockquote]:my-2
                         [&_b]:font-bold [&_b]:text-zinc-100
                         [&_i]:italic [&_i]:text-zinc-400
                         [&_s]:line-through [&_s]:opacity-60
                         [&_code]:bg-white/5 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-sm
-                        [&_input[type=checkbox]]:accent-accent [&_input[type=checkbox]]:w-4 [&_input[type=checkbox]]:h-4 [&_input[type=checkbox]]:mt-1"
+                        [&_input[type=checkbox]]:accent-accent [&_input[type=checkbox]]:w-4 [&_input[type=checkbox]]:h-4 [&_input[type=checkbox]]:mt-1`}
                         spellCheck={false}
                         style={{ whiteSpace: 'pre-wrap' }} 
                     />
