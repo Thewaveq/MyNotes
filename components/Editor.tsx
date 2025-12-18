@@ -718,7 +718,7 @@ export const Editor: React.FC<EditorProps> = ({
                         [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ul]:text-zinc-300
                         [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_ol]:text-zinc-300
                         [&_li]:my-1 [&_li]:pl-1
-                        [&_p]:mb-2 [&_p]:mt-0
+                        [&_p]:mb-0 [&_p]:mt-0
                         [&_blockquote]:border-l-4 [&_blockquote]:border-zinc-700 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-zinc-400 [&_blockquote]:my-2
                         [&_b]:font-bold [&_b]:text-zinc-100
                         [&_i]:italic [&_i]:text-zinc-400
