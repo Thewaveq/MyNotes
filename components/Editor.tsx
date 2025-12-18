@@ -1,6 +1,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { 
+	Maximize2, Minimize2,
     Sparkles, Download, Save, Loader2, ChevronLeft, 
     Bold, Italic, Underline, Strikethrough, List, 
     SquareCheck, X, PenLine, Kanban, Calendar as CalendarIcon,
