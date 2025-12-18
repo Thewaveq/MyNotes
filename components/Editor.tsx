@@ -575,6 +575,9 @@ export const Editor: React.FC<EditorProps> = ({
                 const chunkText = (chunk as GenerateContentResponse).text;
                 if (chunkText) {
                     accumulatedHTML += chunkText;
+                    onst cleanDisplayHTML = accumulatedHTML
+                        .replace(/\n[ \t]+/g, '\n')
+                        .replace(/\n{3,}/g, '\n\n');
                     wrapper.innerHTML = accumulatedHTML;
                 }
             }
