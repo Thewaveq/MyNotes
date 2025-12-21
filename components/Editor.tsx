@@ -672,7 +672,7 @@ export const Editor: React.FC<EditorProps> = ({
     return (
         <div className={`flex-1 flex flex-col h-full relative bg-transparent min-w-0 overflow-hidden ${className}`}>
             {/* Top Toolbar */}
-            <div className="h-14 md:h-16 flex items-center justify-between px-3 md:px-6 z-20 shrink-0 w-full bg-zinc-950/80 backdrop-blur-md border-b border-white/5 md:bg-transparent md:border-transparent transition-all duration-300">
+            <div className="h-14 md:h-16 flex items-center justify-between px-3 md:pl-14 md:pr-6 z-20 shrink-0 w-full bg-zinc-950/80 backdrop-blur-md border-b border-white/5 md:bg-transparent md:border-transparent transition-all duration-300">
                 <div className="flex items-center gap-3 md:gap-4 flex-1 mr-4 overflow-hidden">
                     <button onClick={onBack} className="md:hidden p-2 -ml-2 text-zinc-400 hover:text-white transition-colors rounded-full hover:bg-white/5">
                         <ChevronLeft size={24} />
