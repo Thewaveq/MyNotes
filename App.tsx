@@ -8,7 +8,7 @@ import {
     getNotes, saveNote, deleteNote, createNote, bulkSaveNotes, 
     getFolders, createFolder, deleteFolder, updateFolder, saveSettings 
 } from './utils/storage';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2, PanelLeft } from 'lucide-react';
 import { supabase, db, mapNoteFromDb, mapFolderFromDb } from './utils/supabase';
 
 const App: React.FC = () => {
@@ -16,6 +16,7 @@ const App: React.FC = () => {
     const [folders, setFolders] = useState<Folder[]>([]);
     const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
     const [showSettings, setShowSettings] = useState(false);
+	const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     
     // Auth & Sync State
     const [user, setUser] = useState<UserProfile | null>(null);
@@ -499,8 +500,22 @@ const App: React.FC = () => {
                 onMoveNote={handleMoveNote}
                 onMoveFolder={handleMoveFolder}
                 onOpenSettings={() => setShowSettings(true)}
-                className={isEditing ? 'hidden md:flex' : 'flex'}
+                onClose={() => setIsSidebarOpen(false)}
+                className={`${isEditing ? 'hidden md:flex' : 'flex'} ${isSidebarOpen ? '' : '!hidden'}`}
             />
+			 
+			 {/* Button to open sidebar when collapsed */}
+            {!isSidebarOpen && (
+                <div className="absolute top-4 left-4 z-10 hidden md:block">
+                    <button
+                        onClick={() => setIsSidebarOpen(true)}
+                        className="p-2 bg-zinc-800 border border-white/10 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all shadow-lg"
+                        title="Развернуть меню"
+                    >
+                        <PanelLeft size={20} />
+                    </button>
+                </div>
+            )}
             
             <div className={`flex-1 flex overflow-hidden relative ${!isEditing ? 'hidden md:flex' : 'flex'}`}>
                 <Editor 
