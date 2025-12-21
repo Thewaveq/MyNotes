@@ -264,10 +264,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
                 {/* Folder Header */}
                 <div 
-                    className={`flex items-center justify-between group px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${isEditing ? 'bg-white/10' : 'hover:bg-white/5 text-zinc-400 hover:text-zinc-200'} `}
+                    className={`relative flex items-center group px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${isEditing ? 'bg-white/10' : 'hover:bg-white/5 text-zinc-400 hover:text-zinc-200'} `}
                     onClick={() => !isEditing && toggleFolder(folder.id)}
                 >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden relative z-0">
                         {isEditing ? (
                             <input 
                                 ref={inputRef}
@@ -283,47 +283,49 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 <div className="shrink-0 text-zinc-600">
                                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                 </div>
-                                <div className="flex items-center gap-2 overflow-hidden w-full">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
                                     {isExpanded 
                                         ? <FolderOpen size={16} className="text-blue-500 shrink-0" /> 
                                         : <FolderIcon size={16} className="text-blue-500 shrink-0" />
                                     }
-                                    <span className="font-medium text-sm truncate">{folder.name}</span>
-                                    <span className="text-xs text-zinc-600 ml-auto">
-                                        {(childFolders.length + childNotes.length) || 0}
-                                    </span>
+                                    <span className="font-medium text-sm truncate flex-1">{folder.name}</span>
                                 </div>
+                                {/* Цифра прижата вправо, но не прыгает, так как кнопки теперь absolute */}
+                                <span className="text-xs text-zinc-600 shrink-0 ml-2 group-hover:opacity-0 transition-opacity duration-200">
+                                    {(childFolders.length + childNotes.length) || 0}
+                                </span>
                             </>
                         )}
                     </div>
 
                     {!isEditing && (
-                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        /* Кнопки теперь с абсолютным позиционированием справа */
+                        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-zinc-900 shadow-xl shadow-black border border-white/10 rounded-md px-1 py-0.5 z-10 scale-95 group-hover:scale-100">
                              <button 
                                 onClick={(e) => { e.stopPropagation(); startCreatingFolder(folder.id); }}
-                                className="p-1 hover:text-white hover:bg-white/10 rounded"
+                                className="p-1 hover:text-white hover:bg-white/10 rounded transition-colors"
                                 title="Новая подпапка"
                             >
-                                <FolderIcon size={12} className="text-zinc-500" />
+                                <FolderIcon size={12} className="text-zinc-400 hover:text-white" />
                                 <span className="absolute text-[8px] top-0.5 right-0.5 font-bold">+</span>
                             </button>
                              <button 
                                 onClick={(e) => { e.stopPropagation(); startEditingFolder(folder); }}
-                                className="p-1 hover:text-white hover:bg-white/10 rounded"
+                                className="p-1 hover:text-white hover:bg-white/10 rounded transition-colors"
                                 title="Переименовать"
                             >
                                 <Edit2 size={12} />
                             </button>
                             <button 
                                 onClick={(e) => { e.stopPropagation(); setMoveMenuTarget({ id: folder.id, type: 'folder' }); }}
-                                className="p-1 hover:text-white hover:bg-white/10 rounded"
+                                className="p-1 hover:text-white hover:bg-white/10 rounded transition-colors"
                                 title="Переместить папку"
                             >
                                 <CornerDownRight size={12} />
                             </button>
                             <button 
                                 onClick={(e) => { e.stopPropagation(); onDeleteFolder(folder.id); }}
-                                className="p-1 hover:text-red-400 hover:bg-red-500/10 rounded"
+                                className="p-1 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
                                 title="Удалить"
                             >
                                 <Trash2 size={12} />
