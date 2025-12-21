@@ -111,6 +111,56 @@ export const Editor: React.FC<EditorProps> = ({
         });
     };
 
+	// --- Image link ---
+	const insertImage = (src: string) => {
+        const selection = window.getSelection();
+        if (!selection || !selection.rangeCount) return;
+        const range = selection.getRangeAt(0);
+
+        const img = document.createElement('img');
+        img.src = src;
+        img.className = "max-w-full h-auto rounded-lg my-2 border border-white/10 shadow-lg select-none align-middle inline-block";
+        img.contentEditable = "false"; // Чтобы картинка была как объект, а не текст
+
+        range.deleteContents();
+        range.insertNode(img);
+        
+        // Ставим курсор после картинки
+        range.setStartAfter(img);
+        range.setEndAfter(img); 
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        handleInput();
+    };
+
+    const handlePaste = (e: React.ClipboardEvent) => {
+        // 1. Если в буфере файл (картинка)
+        if (e.clipboardData.files.length > 0) {
+            const file = e.clipboardData.files[0];
+            if (file.type.startsWith('image/')) {
+                e.preventDefault();
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    if (event.target?.result) {
+                        insertImage(event.target.result as string);
+                    }
+                };
+                reader.readAsDataURL(file);
+                return;
+            }
+        }
+
+        // 2. Если в буфере текст (ссылка на картинку)
+        const text = e.clipboardData.getData('text');
+        const imageExtRegex = /\.(jpeg|jpg|gif|png|webp|bmp)$/i;
+        
+        if (text && (text.match(imageExtRegex) || (text.startsWith('http') && text.match(imageExtRegex)))) {
+            e.preventDefault();
+            insertImage(text);
+        }
+    };
+
 	// --- External URL Logic ---
     const detectUrlLink = () => {
         const selection = window.getSelection();
@@ -124,33 +174,36 @@ export const Editor: React.FC<EditorProps> = ({
         const text = node.textContent;
         const offset = range.startOffset;
         
-        // Проверяем, был ли нажат пробел (или ввод), чтобы превратить ссылку
         const charBefore = text.slice(offset - 1, offset);
         if (!/[\s\u00A0]/.test(charBefore)) return;
 
-        const textBeforeCursor = text.slice(0, offset - 1); // Текст без последнего пробела
+        const textBeforeCursor = text.slice(0, offset - 1);
         const words = textBeforeCursor.split(/[\s\u00A0]+/);
         const lastWord = words[words.length - 1];
 
-        // Регулярка для URL (http, https, www)
         const urlRegex = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/;
         
         if (urlRegex.test(lastWord)) {
-            // Нашли ссылку, заменяем её
             const wordStart = textBeforeCursor.lastIndexOf(lastWord);
             
             range.setStart(node, wordStart);
-            range.setEnd(node, offset - 1); // Не захватываем пробел
+            range.setEnd(node, offset - 1);
             range.deleteContents();
 
             const fullUrl = lastWord.startsWith('www.') ? `https://${lastWord}` : lastWord;
-            const linkEl = createExternalLinkElement(fullUrl, lastWord);
             
-            range.insertNode(linkEl);
+            if (/\.(jpeg|jpg|gif|png|webp|bmp)$/i.test(fullUrl)) {
+                const img = document.createElement('img');
+                img.src = fullUrl;
+                img.className = "max-w-full h-auto rounded-lg my-2 border border-white/10 shadow-lg select-none align-middle inline-block";
+                img.contentEditable = "false";
+                range.insertNode(img);
+            } else {
+				
+                const linkEl = createExternalLinkElement(fullUrl, lastWord);
+                range.insertNode(linkEl);
+            }
             
-            // Курсор уже стоит после ссылки (перед пробелом), но нужно убедиться
-            // Обычно после вставки contentEditable="false" элемента курсор может вести себя странно,
-            // но так как мы оставили пробел (offset-1), курсор должен быть корректным.
             range.collapse(false);
             selection.removeAllRanges();
             selection.addRange(range);
@@ -163,10 +216,8 @@ export const Editor: React.FC<EditorProps> = ({
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         link.contentEditable = 'false';
-        // Используем тот же стиль, что и для createInlineLinkElement
         link.className = 'inline-flex items-center gap-2 px-2.5 py-0.5 mx-1 rounded-md bg-zinc-800 hover:bg-zinc-700 border border-white/10 hover:border-blue-500/30 text-zinc-200 transition-all select-none align-middle group no-underline cursor-pointer align-bottom whitespace-normal';
         
-        // SVG иконка Globe
         const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`;
         
         link.innerHTML = `${iconSvg}<span class="font-medium text-sm underline decoration-white/20 underline-offset-2 group-hover:decoration-blue-500/50 decoration-1 text-blue-100">${label}</span>`;
@@ -821,6 +872,7 @@ export const Editor: React.FC<EditorProps> = ({
                         contentEditable
                         onInput={handleInput}
                         onKeyDown={handleKeyDown}
+						onPaste={handlePaste}
                         onClick={handleEditorClick}
                         className={`h-full p-4 md:p-8 overflow-y-auto focus:outline-none text-zinc-300 leading-normal text-base md:text-lg font-serif outline-none no-scrollbar overscroll-none mx-auto w-full transition-all duration-500 ease-in-out ${isCentered ? 'max-w-3xl border-x border-white/5 bg-black/20 shadow-2xl' : 'max-w-full border-x border-transparent bg-transparent'}
                         [&_h1]:text-2xl md:[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-8 [&_h1]:mb-4 [&_h1]:tracking-tight
