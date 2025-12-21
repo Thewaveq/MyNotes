@@ -8,7 +8,7 @@ import {
     getNotes, saveNote, deleteNote, createNote, bulkSaveNotes, 
     getFolders, createFolder, deleteFolder, updateFolder, saveSettings 
 } from './utils/storage';
-import { AlertTriangle, Loader2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { AlertTriangle, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase, db, mapNoteFromDb, mapFolderFromDb } from './utils/supabase';
 
 const App: React.FC = () => {
@@ -516,14 +516,14 @@ const App: React.FC = () => {
                 } transition-all duration-300 ease-in-out`}
             />
 
-			 {/* Sidebar Toggle Button */}
+			{/* Sidebar Toggle Button */}
             <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className={`hidden md:flex absolute top-6 z-50 items-center justify-center w-6 h-12 bg-zinc-900 border-y border-r border-white/10 rounded-r-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all duration-300 ease-in-out`}
-                style={{ left: isSidebarOpen ? '20rem' : '0' }}
-                title={isSidebarOpen ? "Свернуть меню" : "Развернуть меню"}
+                className={`hidden md:flex absolute top-4 z-50 items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:text-zinc-100 hover:bg-white/10 transition-all duration-300 ease-in-out`}
+                style={{ left: isSidebarOpen ? '20.5rem' : '1rem' }}
+                title={isSidebarOpen ? "Свернуть" : "Развернуть"}
             >
-                {isSidebarOpen ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
+                {isSidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
             </button>
             
             <div className={`flex-1 flex overflow-hidden relative ${!isEditing ? 'hidden md:flex' : 'flex'}`}>
