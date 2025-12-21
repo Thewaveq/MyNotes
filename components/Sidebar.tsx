@@ -535,6 +535,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         onDelete={onDeleteNote}
                         onOpenMoveMenu={(id) => setMoveMenuTarget({ id, type: 'note' })}
                         onDragStart={handleDragStartNote}
+
+                        isMenuOpen={activeMenuId === note.id}
+                        onToggleMenu={(e) => { 
+                            e.stopPropagation(); 
+                            setActiveMenuId(activeMenuId === note.id ? null : note.id); 
+                        }}
+                        
                     />
                 ))}
 
