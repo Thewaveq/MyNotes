@@ -43,13 +43,18 @@ const getNoteIcon = (type: Note['type']) => {
     }
 };
 
-const NoteItem: React.FC<NoteItemProps> = ({ 
+const NoteItem: React.FC<NoteItemProps & { 
+    isMenuOpen: boolean;
+    onToggleMenu: (e: React.MouseEvent) => void; 
+}> = ({ 
     note, 
     isActive, 
     onSelect, 
     onDelete, 
     onOpenMoveMenu, 
-    onDragStart 
+    onDragStart,
+    isMenuOpen,
+    onToggleMenu
 }) => (
     <div 
         draggable
@@ -61,36 +66,48 @@ const NoteItem: React.FC<NoteItemProps> = ({
             : 'hover:bg-white/5 text-zinc-400 hover:text-zinc-200'}
         `}
     >
-        <div className="flex justify-between items-start gap-3">
+        <div className="flex items-center gap-3 relative z-0">
              {/* Icon Indicator */}
-             <div className={`mt-0.5 ${isActive ? 'text-blue-400' : 'text-zinc-600 group-hover:text-zinc-500'}`}>
+             <div className={`mt-0.5 shrink-0 ${isActive ? 'text-blue-400' : 'text-zinc-600 group-hover:text-zinc-500'}`}>
                 {getNoteIcon(note.type)}
             </div>
 
-            <div className="flex-1 min-w-0">
+            {/* Text Container - Flex 1 to take space */}
+            <div className="flex-1 min-w-0 pr-6"> {/* pr-6 оставляет место под кнопку, чтобы текст не наезжал */}
                 <h3 className={`font-medium truncate text-[14px] leading-snug ${isActive ? 'text-white' : 'text-zinc-300'}`}>
                     {note.title || (note.type === 'board' ? 'Новая доска' : note.type === 'calendar' ? 'Календарь' : note.type === 'image-board' ? 'Референсы' : 'Без названия')}
                 </h3>
             </div>
             
-            {/* Actions: Move & Delete */}
-            <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${isActive ? 'opacity-100' : ''}`}>
+            {/* 3 Dots Button (Absolute) */}
+            <div className={`absolute right-1 top-1/2 -translate-y-1/2 z-10 ${isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
                 <button 
-                    onClick={(e) => { e.stopPropagation(); onOpenMoveMenu(note.id); }}
-                    className="p-1 rounded hover:bg-zinc-700/50 text-zinc-500 hover:text-white"
-                    title="Переместить"
+                    onClick={onToggleMenu}
+                    className={`p-1 rounded-lg transition-colors ${isMenuOpen ? 'bg-zinc-700 text-white' : 'hover:bg-zinc-700/50 text-zinc-500 hover:text-white'}`}
                 >
-                    <CornerDownRight size={14} />
-                </button>
-                <button 
-                    onClick={(e) => onDelete(note.id, e)}
-                    className="p-1 rounded hover:bg-red-500/20 text-zinc-500 hover:text-red-400"
-                    title="Удалить"
-                >
-                    <Trash2 size={14} />
+                    <MoreHorizontal size={16} />
                 </button>
             </div>
         </div>
+
+        {/* Dropdown Menu */}
+        {isMenuOpen && (
+            <div className="absolute right-0 top-9 z-50 w-40 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl shadow-black p-1 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onOpenMoveMenu(note.id); }}
+                    className="flex items-center gap-2 px-2 py-1.5 text-xs text-zinc-300 hover:text-white hover:bg-white/10 rounded-lg w-full text-left"
+                >
+                    <CornerDownRight size={14} /> Переместить
+                </button>
+                <div className="h-px bg-white/5 my-0.5" />
+                <button 
+                    onClick={(e) => onDelete(note.id, e)}
+                    className="flex items-center gap-2 px-2 py-1.5 text-xs text-red-400 hover:bg-red-500/10 rounded-lg w-full text-left"
+                >
+                    <Trash2 size={14} /> Удалить
+                </button>
+            </div>
+        )}
     </div>
 );
 
@@ -115,6 +132,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     
     // Updated state to track both ID and TYPE (note or folder)
     const [moveMenuTarget, setMoveMenuTarget] = useState<{ id: string, type: 'note' | 'folder' } | null>(null);
+    
+    const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+    // Закрыть меню при клике в любое место (прозрачная подложка будет ниже)
+    const handleCloseMenu = (e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        setActiveMenuId(null);
+    };
     
     // UI State for creating/editing
     const [creationState, setCreationState] = useState<{ parentId?: string, isCreating: boolean }>({ isCreating: false });
@@ -267,7 +291,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className={`relative flex items-center group px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${isEditing ? 'bg-white/10' : 'hover:bg-white/5 text-zinc-400 hover:text-zinc-200'} `}
                     onClick={() => !isEditing && toggleFolder(folder.id)}
                 >
-                    <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden relative z-0">
+                    <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden relative z-0 pr-6">
                         {isEditing ? (
                             <input 
                                 ref={inputRef}
@@ -290,8 +314,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     }
                                     <span className="font-medium text-sm truncate flex-1">{folder.name}</span>
                                 </div>
-                                {/* Цифра прижата вправо, но не прыгает, так как кнопки теперь absolute */}
-                                <span className="text-xs text-zinc-600 shrink-0 ml-2 group-hover:opacity-0 transition-opacity duration-200">
+                                {/* Скрываем цифру, если открыто меню */}
+                                <span className={`text-xs text-zinc-600 shrink-0 ml-2 transition-opacity duration-200 ${activeMenuId === folder.id ? 'opacity-0' : 'group-hover:opacity-0'}`}>
                                     {(childFolders.length + childNotes.length) || 0}
                                 </span>
                             </>
@@ -299,38 +323,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
 
                     {!isEditing && (
-                        /* Кнопки теперь с абсолютным позиционированием справа */
-                        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-zinc-900 shadow-xl shadow-black border border-white/10 rounded-md px-1 py-0.5 z-10 scale-95 group-hover:scale-100">
-                             <button 
-                                onClick={(e) => { e.stopPropagation(); startCreatingFolder(folder.id); }}
-                                className="p-1 hover:text-white hover:bg-white/10 rounded transition-colors"
-                                title="Новая подпапка"
-                            >
-                                <FolderIcon size={12} className="text-zinc-400 hover:text-white" />
-                                <span className="absolute text-[8px] top-0.5 right-0.5 font-bold">+</span>
-                            </button>
-                             <button 
-                                onClick={(e) => { e.stopPropagation(); startEditingFolder(folder); }}
-                                className="p-1 hover:text-white hover:bg-white/10 rounded transition-colors"
-                                title="Переименовать"
-                            >
-                                <Edit2 size={12} />
-                            </button>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); setMoveMenuTarget({ id: folder.id, type: 'folder' }); }}
-                                className="p-1 hover:text-white hover:bg-white/10 rounded transition-colors"
-                                title="Переместить папку"
-                            >
-                                <CornerDownRight size={12} />
-                            </button>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onDeleteFolder(folder.id); }}
-                                className="p-1 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                                title="Удалить"
-                            >
-                                <Trash2 size={12} />
-                            </button>
-                        </div>
+                        <>
+                            {/* 3 Dots Button */}
+                            <div className={`absolute right-1 top-1/2 -translate-y-1/2 z-10 ${activeMenuId === folder.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === folder.id ? null : folder.id); }}
+                                    className={`p-1 rounded-lg transition-colors ${activeMenuId === folder.id ? 'bg-zinc-700 text-white' : 'hover:bg-zinc-700/50 text-zinc-500 hover:text-white'}`}
+                                >
+                                    <MoreHorizontal size={16} />
+                                </button>
+                            </div>
+
+                            {/* Context Menu */}
+                            {activeMenuId === folder.id && (
+                                <div className="absolute right-0 top-8 z-50 w-44 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl shadow-black p-1 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100 origin-top-right cursor-default" onClick={(e) => e.stopPropagation()}>
+                                    <button 
+                                        onClick={() => { handleCloseMenu(); startCreatingFolder(folder.id); }}
+                                        className="flex items-center gap-2 px-2 py-1.5 text-xs text-zinc-300 hover:text-white hover:bg-white/10 rounded-lg w-full text-left"
+                                    >
+                                        <FolderIcon size={14} /> Новая подпапка
+                                    </button>
+                                    <button 
+                                        onClick={() => { handleCloseMenu(); startEditingFolder(folder); }}
+                                        className="flex items-center gap-2 px-2 py-1.5 text-xs text-zinc-300 hover:text-white hover:bg-white/10 rounded-lg w-full text-left"
+                                    >
+                                        <Edit2 size={14} /> Переименовать
+                                    </button>
+                                    <button 
+                                        onClick={() => { handleCloseMenu(); setMoveMenuTarget({ id: folder.id, type: 'folder' }); }}
+                                        className="flex items-center gap-2 px-2 py-1.5 text-xs text-zinc-300 hover:text-white hover:bg-white/10 rounded-lg w-full text-left"
+                                    >
+                                        <CornerDownRight size={14} /> Переместить
+                                    </button>
+                                    <div className="h-px bg-white/5 my-0.5" />
+                                    <button 
+                                        onClick={() => { handleCloseMenu(); onDeleteFolder(folder.id); }}
+                                        className="flex items-center gap-2 px-2 py-1.5 text-xs text-red-400 hover:bg-red-500/10 rounded-lg w-full text-left"
+                                    >
+                                        <Trash2 size={14} /> Удалить
+                                    </button>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
 
@@ -365,6 +399,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 onDelete={onDeleteNote}
                                 onOpenMoveMenu={(id) => setMoveMenuTarget({ id, type: 'note' })}
                                 onDragStart={handleDragStartNote}
+                                isMenuOpen={activeMenuId === note.id}
+                                onToggleMenu={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === note.id ? null : note.id); }}
                             />
                         ))}
                          {childFolders.length === 0 && childNotes.length === 0 && !creationState.isCreating && (
@@ -582,6 +618,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                     </div>
                 </div>
+            )}
+            {activeMenuId && (
+                <div className="fixed inset-0 z-40 bg-transparent" onClick={handleCloseMenu} />
             )}
         </div>
     );
