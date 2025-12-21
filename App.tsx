@@ -8,7 +8,7 @@ import {
     getNotes, saveNote, deleteNote, createNote, bulkSaveNotes, 
     getFolders, createFolder, deleteFolder, updateFolder, saveSettings 
 } from './utils/storage';
-import { AlertTriangle, Loader2, PanelLeft } from 'lucide-react';
+import { AlertTriangle, Loader2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { supabase, db, mapNoteFromDb, mapFolderFromDb } from './utils/supabase';
 
 const App: React.FC = () => {
@@ -16,7 +16,6 @@ const App: React.FC = () => {
     const [folders, setFolders] = useState<Folder[]>([]);
     const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
     const [showSettings, setShowSettings] = useState(false);
-	const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     
     // Auth & Sync State
     const [user, setUser] = useState<UserProfile | null>(null);
@@ -28,6 +27,18 @@ const App: React.FC = () => {
             ? window.visualViewport.height 
             : typeof window !== 'undefined' ? window.innerHeight : 0
     );
+
+	// Sidebar State with LocalStorage persistence
+    const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('sidebarState') !== 'closed';
+        }
+        return true;
+    });
+
+    useEffect(() => {
+        localStorage.setItem('sidebarState', isSidebarOpen ? 'open' : 'closed');
+    }, [isSidebarOpen]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -500,22 +511,20 @@ const App: React.FC = () => {
                 onMoveNote={handleMoveNote}
                 onMoveFolder={handleMoveFolder}
                 onOpenSettings={() => setShowSettings(true)}
-                onClose={() => setIsSidebarOpen(false)}
-                className={`${isEditing ? 'hidden md:flex' : 'flex'} ${isSidebarOpen ? '' : '!hidden'}`}
+                className={`${isEditing ? 'hidden md:flex' : 'flex'} ${
+                    isSidebarOpen ? 'md:w-80' : 'md:w-0 md:opacity-0 md:overflow-hidden md:border-none'
+                } transition-all duration-300 ease-in-out`}
             />
-			 
-			 {/* Button to open sidebar when collapsed */}
-            {!isSidebarOpen && (
-                <div className="absolute top-4 left-4 z-10 hidden md:block">
-                    <button
-                        onClick={() => setIsSidebarOpen(true)}
-                        className="p-2 bg-zinc-800 border border-white/10 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all shadow-lg"
-                        title="Развернуть меню"
-                    >
-                        <PanelLeft size={20} />
-                    </button>
-                </div>
-            )}
+
+			 {/* Sidebar Toggle Button */}
+            <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className={`hidden md:flex absolute top-6 z-50 items-center justify-center w-6 h-12 bg-zinc-900 border-y border-r border-white/10 rounded-r-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all duration-300 ease-in-out`}
+                style={{ left: isSidebarOpen ? '20rem' : '0' }}
+                title={isSidebarOpen ? "Свернуть меню" : "Развернуть меню"}
+            >
+                {isSidebarOpen ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
+            </button>
             
             <div className={`flex-1 flex overflow-hidden relative ${!isEditing ? 'hidden md:flex' : 'flex'}`}>
                 <Editor 
