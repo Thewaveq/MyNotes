@@ -521,14 +521,29 @@ export const Editor: React.FC<EditorProps> = ({
         if (!selection || !selection.rangeCount) return;
         const range = selection.getRangeAt(0);
         
-        const div = document.createElement('div');
-        div.className = "flex items-center gap-2 my-1";
-        div.innerHTML = `<input type="checkbox" class="accent-accent w-4 h-4 cursor-pointer"> <span>Задача</span>`;
+        // Создаем сам элемент чекбокса
+        const input = document.createElement('input');
+        input.type = "checkbox";
+        // contentEditable="false" важно, чтобы курсор не попадал ВНУТРЬ чекбокса
+        input.contentEditable = "false"; 
+        // align-middle выравнивает чекбокс по центру строки
+        // mr-2 добавляет отступ справа от будущего текста
+        input.className = "accent-accent w-4 h-4 cursor-pointer inline-block align-middle mr-2 relative -top-[1px]";
         
-        range.deleteContents();
-        range.insertNode(div);
-        range.setStartAfter(div);
-        range.setEndAfter(div);
+        range.deleteContents(); // Удаляем выделенный текст, если есть
+        range.insertNode(input); // Вставляем чекбокс
+        
+        // Создаем неразрывный пробел после чекбокса, чтобы курсору было за что зацепиться
+        // и текст не "прилипал" к чекбоксу
+        const space = document.createTextNode('\u00A0'); 
+        
+        range.setStartAfter(input);
+        range.insertNode(space);
+        
+        // Ставим курсор после пробела
+        range.setStartAfter(space);
+        range.setEndAfter(space);
+        
         selection.removeAllRanges();
         selection.addRange(range);
         
@@ -820,7 +835,7 @@ export const Editor: React.FC<EditorProps> = ({
                         [&_i]:italic [&_i]:text-zinc-400
                         [&_s]:line-through [&_s]:opacity-60
                         [&_code]:bg-white/5 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-sm
-                        [&_input[type=checkbox]]:accent-accent [&_input[type=checkbox]]:w-4 [&_input[type=checkbox]]:h-4 [&_input[type=checkbox]]:mt-1`}
+                        [&_input[type=checkbox]]:accent-accent [&_input[type=checkbox]]:w-4 [&_input[type=checkbox]]:h-4 [&_input[type=checkbox]]:cursor-pointer`}
                         spellCheck={false}
                         style={{ whiteSpace: 'pre-wrap' }} 
                     />
