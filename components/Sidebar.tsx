@@ -5,7 +5,7 @@ import {
     Command, Folder as FolderIcon, FolderOpen, MoreHorizontal,
     CornerDownRight, ChevronRight, ChevronDown, FileText,
     Kanban, FilePlus, Edit2, Calendar as CalendarIcon, Image as ImageIcon,
-    Settings, User, PanelLeftClose
+    Settings, User
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -22,7 +22,6 @@ interface SidebarProps {
     onMoveNote: (noteId: string, folderId?: string) => void;
     onMoveFolder: (folderId: string, targetParentId?: string) => void;
     onOpenSettings: () => void; // New Handler
-    onClose: () => void;
     className?: string;
 }
 
@@ -109,7 +108,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onMoveNote,
     onMoveFolder,
     onOpenSettings,
-    onClose,
     className = ""
 }) => {
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -392,7 +390,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
     return (
         <div 
-            className={`w-full md:w-80 h-full flex flex-col relative border-r border-white/5 bg-zinc-950/30 backdrop-blur-md ${className}`}
+            className={`w-full h-full flex flex-col relative border-r border-white/5 bg-zinc-950/30 backdrop-blur-md ${className}`}
         >
             {/* Header */}
             <div className="p-4 pt-6 shrink-0">
@@ -401,14 +399,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
                             <Command size={18} className="text-zinc-200" />
                         </div>
-                        <span className="font-bold text-lg tracking-tight mr-2">AI Notes</span>
-                        <button 
-                            onClick={onClose}
-                            className="p-1 rounded-lg hover:bg-white/10 text-zinc-500 hover:text-zinc-200 transition-colors"
-                            title="Свернуть меню"
-                        >
-                            <PanelLeftClose size={18} />
-                        </button>
+                        <span className="font-bold text-lg tracking-tight">AI Notes</span>
                     </div>
                     
                     {/* Evenly spaced buttons */}
