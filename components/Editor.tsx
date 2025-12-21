@@ -106,7 +106,6 @@ export const Editor: React.FC<EditorProps> = ({
         
         onUpdateNote(note.id, { 
             content: newContent,
-            title: firstLine,
             updatedAt: Date.now()
         });
     };
