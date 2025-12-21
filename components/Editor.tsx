@@ -125,9 +125,6 @@ export const Editor: React.FC<EditorProps> = ({
         range.deleteContents();
         range.insertNode(img);
 
-		const br = document.createElement('br');
-        img.after(br)
-        
         // Ставим курсор после картинки
         range.setStartAfter(img);
         range.setEndAfter(img); 
@@ -201,7 +198,6 @@ export const Editor: React.FC<EditorProps> = ({
                 img.className = "max-w-full h-auto rounded-lg my-2 border border-white/10 shadow-lg select-none align-middle inline-block";
                 img.contentEditable = "false";
                 range.insertNode(img);
-				img.after(document.createElement('br'));
             } else {
 				
                 const linkEl = createExternalLinkElement(fullUrl, lastWord);
