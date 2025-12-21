@@ -274,7 +274,13 @@ const App: React.FC = () => {
     // --- Note Operations ---
 
     const handleCreateNote = (folderId?: string, type: 'text' | 'board' | 'calendar' | 'image-board' = 'text') => {
-        const newNote = createNote(folderId, type); // Creates locally
+        // Создаем заметку и принудительно ставим заголовок, если это текстовая заметка
+        const rawNote = createNote(folderId, type);
+        const newNote = { 
+            ...rawNote, 
+            title: rawNote.title || (type === 'text' ? 'Новая заметка' : rawNote.title) 
+        };
+        
         setNotes([newNote, ...notes]);
         setActiveNoteId(newNote.id);
         
