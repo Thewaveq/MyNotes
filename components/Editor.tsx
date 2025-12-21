@@ -6,7 +6,7 @@ import {
     Bold, Italic, Underline, Strikethrough, List, 
     SquareCheck, X, PenLine, Kanban, Calendar as CalendarIcon,
     Link2 as LinkIcon, LayoutTemplate, Type, MousePointerClick,
-    Image as ImageIcon
+    Image as ImageIcon, Globe
 } from 'lucide-react';
 import { Note, AIActionType } from '../types';
 import { AIMenu } from './AIMenu';
@@ -99,6 +99,7 @@ export const Editor: React.FC<EditorProps> = ({
         
         detectMarkdownOnInput();
         detectWikiLink();
+		detectUrlLink();
 
         const newContent = editorRef.current.innerHTML;
         const textContent = editorRef.current.innerText;
@@ -108,6 +109,68 @@ export const Editor: React.FC<EditorProps> = ({
             content: newContent,
             updatedAt: Date.now()
         });
+    };
+
+	// --- External URL Logic ---
+    const detectUrlLink = () => {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+        
+        const range = selection.getRangeAt(0);
+        const node = range.startContainer;
+        
+        if (node.nodeType !== Node.TEXT_NODE || !node.textContent) return;
+        
+        const text = node.textContent;
+        const offset = range.startOffset;
+        
+        // Проверяем, был ли нажат пробел (или ввод), чтобы превратить ссылку
+        const charBefore = text.slice(offset - 1, offset);
+        if (!/[\s\u00A0]/.test(charBefore)) return;
+
+        const textBeforeCursor = text.slice(0, offset - 1); // Текст без последнего пробела
+        const words = textBeforeCursor.split(/[\s\u00A0]+/);
+        const lastWord = words[words.length - 1];
+
+        // Регулярка для URL (http, https, www)
+        const urlRegex = /^(https?:\/\/[^\s]+|www\.[^\s]+)$/;
+        
+        if (urlRegex.test(lastWord)) {
+            // Нашли ссылку, заменяем её
+            const wordStart = textBeforeCursor.lastIndexOf(lastWord);
+            
+            range.setStart(node, wordStart);
+            range.setEnd(node, offset - 1); // Не захватываем пробел
+            range.deleteContents();
+
+            const fullUrl = lastWord.startsWith('www.') ? `https://${lastWord}` : lastWord;
+            const linkEl = createExternalLinkElement(fullUrl, lastWord);
+            
+            range.insertNode(linkEl);
+            
+            // Курсор уже стоит после ссылки (перед пробелом), но нужно убедиться
+            // Обычно после вставки contentEditable="false" элемента курсор может вести себя странно,
+            // но так как мы оставили пробел (offset-1), курсор должен быть корректным.
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+    };
+
+    const createExternalLinkElement = (url: string, label: string) => {
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.contentEditable = 'false';
+        // Используем тот же стиль, что и для createInlineLinkElement
+        link.className = 'inline-flex items-center gap-2 px-2.5 py-0.5 mx-1 rounded-md bg-zinc-800 hover:bg-zinc-700 border border-white/10 hover:border-blue-500/30 text-zinc-200 transition-all select-none align-middle group no-underline cursor-pointer align-bottom whitespace-normal';
+        
+        // SVG иконка Globe
+        const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`;
+        
+        link.innerHTML = `${iconSvg}<span class="font-medium text-sm underline decoration-white/20 underline-offset-2 group-hover:decoration-blue-500/50 decoration-1 text-blue-100">${label}</span>`;
+        return link;
     };
 
     // --- Wiki Link Logic ---
@@ -418,11 +481,22 @@ export const Editor: React.FC<EditorProps> = ({
         const target = e.target as HTMLElement;
         const link = target.closest('a');
         
-        if (link && link.dataset.noteId) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (onNavigate) {
-                onNavigate(link.dataset.noteId);
+        if (link) {
+            // Внутренняя ссылка
+            if (link.dataset.noteId) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onNavigate) {
+                    onNavigate(link.dataset.noteId);
+                }
+            } 
+            // Внешняя ссылка (обычный URL)
+            else if (link.href) {
+                // Если нужно открывать по клику (так как contentEditable="false", клик сработает)
+                // Браузер может сам открыть, но лучше проконтролировать:
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(link.href, '_blank', 'noopener,noreferrer');
             }
         }
     };
