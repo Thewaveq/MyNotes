@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
     Maximize2, Minimize2,
     Sparkles, Download, Save, Loader2, ChevronLeft, 
     Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, 
@@ -16,6 +16,8 @@ import TaskItem from '@tiptap/extension-task-item';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Color } from '@tiptap/extension-color';
 import TextStyle from '@tiptap/extension-text-style';
+
+import TurndownService from 'turndown';
 
 import { Note, AIActionType } from '../types';
 import { AIMenu } from './AIMenu';
@@ -48,7 +50,6 @@ export const Editor: React.FC<EditorProps> = ({
     const [saving, setSaving] = useState(false);
     const [showColorPicker, setShowColorPicker] = useState(false);
     
-    // Width layout state
     const [isCentered, setIsCentered] = useState(() => {
         if (typeof window !== 'undefined') {
             return localStorage.getItem('editorWidth') === 'centered';
@@ -64,16 +65,15 @@ export const Editor: React.FC<EditorProps> = ({
 
     const colors = [
         { color: '#fafafa', label: 'Белый' },
-        { color: '#ef4444', label: 'Красный' },      // red-500
-        { color: '#f97316', label: 'Оранжевый' },    // orange-500
-        { color: '#eab308', label: 'Желтый' },       // yellow-500
-        { color: '#22c55e', label: 'Зеленый' },      // green-500
-        { color: '#3b82f6', label: 'Синий' },        // blue-500
-        { color: '#a855f7', label: 'Фиолетовый' },   // purple-500
-        { color: '#ec4899', label: 'Розовый' },      // pink-500
+        { color: '#ef4444', label: 'Красный' },
+        { color: '#f97316', label: 'Оранжевый' },
+        { color: '#eab308', label: 'Желтый' },
+        { color: '#22c55e', label: 'Зеленый' },
+        { color: '#3b82f6', label: 'Синий' },
+        { color: '#a855f7', label: 'Фиолетовый' },
+        { color: '#ec4899', label: 'Розовый' },
     ];
 
-    // --- TipTap Editor Setup ---
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
@@ -104,7 +104,7 @@ export const Editor: React.FC<EditorProps> = ({
                 },
             }),
             Placeholder.configure({
-                placeholder: 'Начните писать или нажмите "/" для команд...',
+                placeholder: 'Начните писать или нажмите "/" для команд...', // Corrected escaping for double quote
                 emptyEditorClass: 'is-editor-empty before:content-[attr(data-placeholder)] before:text-zinc-600 before:float-left before:pointer-events-none before:h-0',
             }),
             TextStyle,
@@ -146,24 +146,33 @@ export const Editor: React.FC<EditorProps> = ({
         if (!note || !editor) return;
         setIsGenerating(true);
         
+        const turndownService = new TurndownService();
+        
         const { from, to } = editor.state.selection;
-        const selectedText = editor.state.doc.textBetween(from, to, ' ');
-        const contextBefore = editor.state.doc.textBetween(0, from, ' ');
-        const contextAfter = editor.state.doc.textBetween(to, editor.state.doc.content.size, ' ');
+        
+        // Получаем контекст всего документа в Markdown для лучшего понимания ИИ
+        const fullHTML = editor.getHTML();
+        const fullMarkdown = turndownService.turndown(fullHTML);
+        
+        // Для точных вставок пока используем текст, но ИИ видит структуру через промпт (если бы мы отправляли fullMarkdown)
+        // В текущей реализации API сервиса принимает contextBefore/After. 
+        // Мы можем передать туда Markdown, если сконвертируем части.
+        // Но для скорости и надежности пока берем текст.
+        
+        const selectedText = editor.state.doc.textBetween(from, to, '\n');
+        const contextBefore = editor.state.doc.textBetween(0, from, '\n'); 
+        const contextAfter = editor.state.doc.textBetween(to, editor.state.doc.content.size, '\n');
 
         try {
             const stream = await streamAIResponse(selectedText, action, prompt, contextBefore, contextAfter);
             
-            if (action !== AIActionType.CONTINUE) {
-                 // Logic for replace/refactor could go here
-            }
-
             for await (const chunk of stream) {
                 const chunkText = (chunk as GenerateContentResponse).text;
                 if (chunkText) {
                     editor.chain().insertContent(chunkText).run();
                 }
             }
+            
         } catch (error) {
             console.error(error);
             alert("Ошибка ИИ. Проверьте ключ API.");
@@ -230,9 +239,9 @@ export const Editor: React.FC<EditorProps> = ({
             onMouseDown={(e) => e.preventDefault()}
             onClick={onClick}
             disabled={disabled}
-            className={`p-1.5 md:p-2.5 rounded-xl transition-all active:scale-95 ${
+            className={`p-1.5 md:p-2.5 rounded-xl transition-all active:scale-95 ${ 
                 isActive 
-                    ? 'bg-blue-500/20 text-blue-400' 
+                    ? 'bg-blue-500/20 text-blue-400'
                     : 'text-zinc-400 hover:text-white hover:bg-white/10'
             } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
@@ -279,7 +288,7 @@ export const Editor: React.FC<EditorProps> = ({
                  <div className="flex-1 relative w-full h-full min-h-0 overflow-hidden">
                     <KanbanBoard 
                         note={note} 
-                        onUpdate={(newContent) => onUpdateNote(note.id, { content: newContent, updatedAt: Date.now() })} 
+                        onUpdate={(newContent) => onUpdateNote(note.id, { content: newContent, updatedAt: Date.now() })}
                     />
                 </div>
             ) : note.type === 'calendar' ? (
