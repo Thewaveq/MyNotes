@@ -164,13 +164,10 @@ const App: React.FC = () => {
             setNotes(prev => {
                 const idx = prev.findIndex(n => n.id === mappedNote.id);
                 if (idx >= 0) {
-                    // Only update if timestamp is newer to prevent loops
-                    if (prev[idx].updatedAt <= mappedNote.updatedAt) {
-                         const copy = [...prev];
-                         copy[idx] = mappedNote;
-                         return copy.sort((a, b) => b.updatedAt - a.updatedAt);
-                    }
-                    return prev;
+                     // Always update from cloud source of truth to avoid clock sync issues
+                     const copy = [...prev];
+                     copy[idx] = mappedNote;
+                     return copy.sort((a, b) => b.updatedAt - a.updatedAt);
                 }
                 return [mappedNote, ...prev].sort((a, b) => b.updatedAt - a.updatedAt);
             });
