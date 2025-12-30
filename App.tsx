@@ -69,9 +69,6 @@ const App: React.FC = () => {
     // Delete Confirmation State
     const [deleteTarget, setDeleteTarget] = useState<{ type: 'note' | 'folder', id: string, name?: string } | null>(null);
 
-    // Cloud Sync Debounce Timeouts
-    const cloudSyncTimeouts = React.useRef<{[key: string]: NodeJS.Timeout}>({});
-
     // Initial Load & Auth Listener
     useEffect(() => {
         // 1. Initial Local Load (Instant)
@@ -92,6 +89,7 @@ const App: React.FC = () => {
                     };
                     setUser(profile);
                     loadCloudData(profile.uid);
+                    setupRealtimeSubscription(profile.uid);
                 }
             });
 
@@ -105,32 +103,26 @@ const App: React.FC = () => {
                     };
                     setUser(profile);
                     loadCloudData(profile.uid);
+                    setupRealtimeSubscription(profile.uid);
                 } else {
                     setUser(null);
+                    // Revert to local data on logout
                     setNotes(getNotes());
                     setFolders(getFolders());
                     setActiveNoteId(null);
+                    // Clean up realtime if needed (supabase handles connection mostly)
                 }
             });
 
             return () => subscription.unsubscribe();
         }
         
+        // If local only and has notes, select first
         const isMobile = window.innerWidth < 768;
         if (localNotes.length > 0 && !isMobile) {
             setActiveNoteId(localNotes[0].id);
         }
     }, []);
-
-    // Dedicated Effect for Realtime Subscription
-    useEffect(() => {
-        if (!user || !supabase) return;
-        
-        const cleanup = setupRealtimeSubscription(user.uid);
-        return () => {
-            if (cleanup) cleanup();
-        };
-    }, [user]);
 
     const setupRealtimeSubscription = (userId: string) => {
         if (!supabase) return;
@@ -169,10 +161,13 @@ const App: React.FC = () => {
             setNotes(prev => {
                 const idx = prev.findIndex(n => n.id === mappedNote.id);
                 if (idx >= 0) {
-                     // Always update from cloud source of truth to avoid clock sync issues
-                     const copy = [...prev];
-                     copy[idx] = mappedNote;
-                     return copy.sort((a, b) => b.updatedAt - a.updatedAt);
+                    // Only update if timestamp is newer to prevent loops
+                    if (prev[idx].updatedAt <= mappedNote.updatedAt) {
+                         const copy = [...prev];
+                         copy[idx] = mappedNote;
+                         return copy.sort((a, b) => b.updatedAt - a.updatedAt);
+                    }
+                    return prev;
                 }
                 return [mappedNote, ...prev].sort((a, b) => b.updatedAt - a.updatedAt);
             });
@@ -302,21 +297,7 @@ const App: React.FC = () => {
         setNotes(prevNotes => prevNotes.map(note => {
             if (note.id === id) {
                 const updatedNote = { ...note, ...updates };
-                
-                // 1. Local Save (Immediate for safety)
-                saveNote(updatedNote); 
-
-                // 2. Cloud Save (Debounced to prevent lag)
-                if (user) {
-                    if (cloudSyncTimeouts.current[id]) {
-                        clearTimeout(cloudSyncTimeouts.current[id]);
-                    }
-                    cloudSyncTimeouts.current[id] = setTimeout(() => {
-                        db.upsertNote(updatedNote, user.uid);
-                        delete cloudSyncTimeouts.current[id];
-                    }, 1000); // Wait 1s after last keystroke
-                }
-
+                syncNote(updatedNote); // Sync
                 return updatedNote;
             }
             return note;
