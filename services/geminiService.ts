@@ -129,7 +129,7 @@ async function streamGemini(apiKey: string, provider: AIProvider, systemInstruct
 }
 
 async function streamOpenAI(apiKey: string, provider: AIProvider, systemInstruction: string, prompt: string) {
-    const baseUrl = (provider.baseUrl || 'https://api.openai.com/v1').replace(///$/, '');
+    const baseUrl = (provider.baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '');
     const model = provider.defaultModel || 'gpt-4o-mini';
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
