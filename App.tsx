@@ -69,6 +69,9 @@ const App: React.FC = () => {
     // Delete Confirmation State
     const [deleteTarget, setDeleteTarget] = useState<{ type: 'note' | 'folder', id: string, name?: string } | null>(null);
 
+    // Cloud Sync Debounce Timeouts
+    const cloudSyncTimeouts = React.useRef<{[key: string]: NodeJS.Timeout}>({});
+
     // Initial Load & Auth Listener
     useEffect(() => {
         // 1. Initial Local Load (Instant)
@@ -297,7 +300,21 @@ const App: React.FC = () => {
         setNotes(prevNotes => prevNotes.map(note => {
             if (note.id === id) {
                 const updatedNote = { ...note, ...updates };
-                syncNote(updatedNote); // Sync
+                
+                // 1. Local Save (Immediate for safety)
+                saveNote(updatedNote); 
+
+                // 2. Cloud Save (Debounced to prevent lag)
+                if (user) {
+                    if (cloudSyncTimeouts.current[id]) {
+                        clearTimeout(cloudSyncTimeouts.current[id]);
+                    }
+                    cloudSyncTimeouts.current[id] = setTimeout(() => {
+                        db.upsertNote(updatedNote, user.uid);
+                        delete cloudSyncTimeouts.current[id];
+                    }, 1000); // Wait 1s after last keystroke
+                }
+
                 return updatedNote;
             }
             return note;
