@@ -334,7 +334,7 @@ export const Editor: React.FC<EditorProps> = ({
 
                     {/* Bottom Floating Toolbar */}
                     {editor && (
-                        <div className="w-full z-30 flex justify-center shrink-0 pt-2 pb-6 pointer-events-none bg-transparent absolute bottom-0">
+                        <div className="w-full z-30 flex justify-center shrink-0 pt-2 pb-6 pointer-events-none bg-transparent">
                             <div className="pointer-events-auto bg-zinc-900/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 rounded-2xl p-2 flex items-center gap-2 max-w-full overflow-x-auto no-scrollbar snap-x snap-mandatory">
                                 
                                 <div className="flex items-center gap-1 md:gap-0.5 pr-2 border-r border-white/10 shrink-0 snap-center">
