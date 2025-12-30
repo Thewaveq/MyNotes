@@ -87,14 +87,7 @@ export const Editor: React.FC<EditorProps> = ({
         }
 
         if (editorRef.current) {
-            const isNewNote = note.id !== lastNoteIdRef.current;
-            // Check if content is actually different to avoid cursor reset on every keystroke
-            const isContentDifferent = editorRef.current.innerHTML !== note.content;
-            // Check if user is currently typing (has focus). 
-            // We only auto-update if we are NOT typing, to avoid conflicts/cursor jumps.
-            const hasFocus = document.activeElement === editorRef.current;
-
-            if (isNewNote || (isContentDifferent && !hasFocus)) {
+            if (note.id !== lastNoteIdRef.current) {
                 editorRef.current.innerHTML = note.content || '';
                 lastNoteIdRef.current = note.id;
             }
