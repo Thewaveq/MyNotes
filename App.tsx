@@ -92,7 +92,6 @@ const App: React.FC = () => {
                     };
                     setUser(profile);
                     loadCloudData(profile.uid);
-                    setupRealtimeSubscription(profile.uid);
                 }
             });
 
@@ -106,26 +105,32 @@ const App: React.FC = () => {
                     };
                     setUser(profile);
                     loadCloudData(profile.uid);
-                    setupRealtimeSubscription(profile.uid);
                 } else {
                     setUser(null);
-                    // Revert to local data on logout
                     setNotes(getNotes());
                     setFolders(getFolders());
                     setActiveNoteId(null);
-                    // Clean up realtime if needed (supabase handles connection mostly)
                 }
             });
 
             return () => subscription.unsubscribe();
         }
         
-        // If local only and has notes, select first
         const isMobile = window.innerWidth < 768;
         if (localNotes.length > 0 && !isMobile) {
             setActiveNoteId(localNotes[0].id);
         }
     }, []);
+
+    // Dedicated Effect for Realtime Subscription
+    useEffect(() => {
+        if (!user || !supabase) return;
+        
+        const cleanup = setupRealtimeSubscription(user.uid);
+        return () => {
+            if (cleanup) cleanup();
+        };
+    }, [user]);
 
     const setupRealtimeSubscription = (userId: string) => {
         if (!supabase) return;
