@@ -4,16 +4,18 @@ import {
     Sparkles, Download, Save, Loader2, ChevronLeft, 
     Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, 
     SquareCheck, X, PenLine, Kanban, Calendar as CalendarIcon,
-    Link2 as LinkIcon, Image as ImageIcon
+    Image as ImageIcon
 } from 'lucide-react';
 
-import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Placeholder from '@tiptap/extension-placeholder';
+import { Color } from '@tiptap/extension-color';
+import TextStyle from '@tiptap/extension-text-style';
 
 import { Note, AIActionType } from '../types';
 import { AIMenu } from './AIMenu';
@@ -44,6 +46,7 @@ export const Editor: React.FC<EditorProps> = ({
     const [aiMenuPos, setAiMenuPos] = useState<{ top: number, left: number } | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [showColorPicker, setShowColorPicker] = useState(false);
     
     // Width layout state
     const [isCentered, setIsCentered] = useState(() => {
@@ -59,6 +62,17 @@ export const Editor: React.FC<EditorProps> = ({
         localStorage.setItem('editorWidth', newState ? 'centered' : 'full');
     };
 
+    const colors = [
+        { color: '#fafafa', label: 'Белый' },
+        { color: '#ef4444', label: 'Красный' },      // red-500
+        { color: '#f97316', label: 'Оранжевый' },    // orange-500
+        { color: '#eab308', label: 'Желтый' },       // yellow-500
+        { color: '#22c55e', label: 'Зеленый' },      // green-500
+        { color: '#3b82f6', label: 'Синий' },        // blue-500
+        { color: '#a855f7', label: 'Фиолетовый' },   // purple-500
+        { color: '#ec4899', label: 'Розовый' },      // pink-500
+    ];
+
     // --- TipTap Editor Setup ---
     const editor = useEditor({
         extensions: [
@@ -73,7 +87,7 @@ export const Editor: React.FC<EditorProps> = ({
                 },
             }),
             Link.configure({
-                openOnClick: false, // We handle clicks manually if needed, or let user ctrl+click
+                openOnClick: false,
                 HTMLAttributes: {
                     class: 'text-blue-400 underline decoration-blue-400/30 hover:decoration-blue-400 transition-all cursor-pointer',
                 },
@@ -93,6 +107,8 @@ export const Editor: React.FC<EditorProps> = ({
                 placeholder: 'Начните писать или нажмите "/" для команд...',
                 emptyEditorClass: 'is-editor-empty before:content-[attr(data-placeholder)] before:text-zinc-600 before:float-left before:pointer-events-none before:h-0',
             }),
+            TextStyle,
+            Color,
         ],
         content: note?.content || '',
         editorProps: {
@@ -111,19 +127,14 @@ export const Editor: React.FC<EditorProps> = ({
         },
     });
 
-    // Sync content when note changes (e.g. switching notes)
     useEffect(() => {
         if (editor && note && note.type !== 'board' && note.type !== 'calendar' && note.type !== 'image-board') {
             const currentContent = editor.getHTML();
-            // Avoid re-rendering loop if content is effectively same
             if (currentContent !== note.content) {
-                // Only set content if it's significantly different to avoid cursor jumps on small updates
-                // Or better: only set if note ID changed. 
-                // Simple check:
                 editor.commands.setContent(note.content || '');
             }
         }
-    }, [note?.id, editor]); // Depend on ID mostly to switch context
+    }, [note?.id, editor]);
 
     const handleManualSave = () => {
         setSaving(true);
@@ -131,18 +142,10 @@ export const Editor: React.FC<EditorProps> = ({
         setTimeout(() => setSaving(false), 800);
     };
 
-    const insertImage = () => {
-        const url = window.prompt('Введите URL изображения:');
-        if (url && editor) {
-            editor.chain().focus().setImage({ src: url }).run();
-        }
-    };
-
     const handleAIAction = async (action: AIActionType, prompt?: string) => {
         if (!note || !editor) return;
         setIsGenerating(true);
         
-        // Context
         const { from, to } = editor.state.selection;
         const selectedText = editor.state.doc.textBetween(from, to, ' ');
         const contextBefore = editor.state.doc.textBetween(0, from, ' ');
@@ -150,23 +153,14 @@ export const Editor: React.FC<EditorProps> = ({
 
         try {
             const stream = await streamAIResponse(selectedText, action, prompt, contextBefore, contextAfter);
-            let accumulatedText = "";
             
-            // If replacing selection or continuing
             if (action !== AIActionType.CONTINUE) {
-                 // Insert a separator or new block if not replacing
-                 // For now, let's just insert at cursor
+                 // Logic for replace/refactor could go here
             }
 
-            // Create a transaction to insert text live
             for await (const chunk of stream) {
                 const chunkText = (chunk as GenerateContentResponse).text;
                 if (chunkText) {
-                    accumulatedText += chunkText;
-                    // Insert text at current position + offset
-                    // This is complex with streaming. 
-                    // Simpler approach: Collect full text then insert? No, user wants stream.
-                    // We will just insertChunk by chunk.
                     editor.chain().insertContent(chunkText).run();
                 }
             }
@@ -193,6 +187,13 @@ export const Editor: React.FC<EditorProps> = ({
         document.body.removeChild(element);
     };
 
+    const applyColor = (color: string) => {
+        if (editor) {
+            editor.chain().focus().setColor(color).run();
+            setShowColorPicker(false);
+        }
+    };
+
     if (!note) {
         return (
             <div className={`flex-1 flex items-center justify-center bg-transparent flex-col gap-6 ${className}`}>
@@ -214,7 +215,6 @@ export const Editor: React.FC<EditorProps> = ({
         return <PenLine className="text-zinc-500 shrink-0" size={20} />;
     };
 
-    // Helper for toolbar buttons
     const ToolbarBtn = ({ 
         icon: Icon, 
         onClick, 
@@ -307,7 +307,32 @@ export const Editor: React.FC<EditorProps> = ({
                         </div>
                     </div>
 
-                    {/* Bottom Floating Toolbar - Reconnected to TipTap */}
+                     {/* Color Picker Overlay */}
+                    {showColorPicker && (
+                        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-4 grid grid-cols-5 gap-3 z-40 animate-fade-in w-auto shadow-black/50">
+                            {colors.map((c) => (
+                                <button
+                                    key={c.color}
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        applyColor(c.color);
+                                    }}
+                                    className="w-9 h-9 rounded-full border border-white/10 hover:scale-110 transition-transform ring-2 ring-transparent hover:ring-white focus:outline-none shrink-0 shadow-sm"
+                                    style={{ backgroundColor: c.color }}
+                                    title={c.label}
+                                />
+                            ))}
+                            <button 
+                                 onMouseDown={(e) => e.preventDefault()}
+                                 onClick={() => setShowColorPicker(false)}
+                                 className="w-9 h-9 rounded-full flex items-center justify-center bg-white/5 text-zinc-400 hover:text-white border border-white/10 shrink-0 hover:bg-white/10 transition-colors"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Bottom Floating Toolbar */}
                     {editor && (
                         <div className="w-full z-30 flex justify-center shrink-0 pt-2 pb-6 pointer-events-none bg-transparent absolute bottom-0">
                             <div className="pointer-events-auto bg-zinc-900/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 rounded-2xl p-2 flex items-center gap-2 max-w-full overflow-x-auto no-scrollbar snap-x snap-mandatory">
@@ -323,7 +348,6 @@ export const Editor: React.FC<EditorProps> = ({
                                         onClick={() => editor.chain().focus().toggleItalic().run()} 
                                         isActive={editor.isActive('italic')} 
                                     />
-                                    {/* TipTap starter kit doesn't have underline by default, usually not md standard, but strikethrough is */}
                                     <ToolbarBtn 
                                         icon={Strikethrough} 
                                         onClick={() => editor.chain().focus().toggleStrike().run()} 
@@ -342,10 +366,16 @@ export const Editor: React.FC<EditorProps> = ({
                                         onClick={() => editor.chain().focus().toggleTaskList().run()} 
                                         isActive={editor.isActive('taskList')} 
                                     />
-                                    <ToolbarBtn 
-                                        icon={ImageIcon} 
-                                        onClick={insertImage} 
-                                    />
+                                </div>
+
+                                <div className="px-2 shrink-0 snap-center">
+                                    <button 
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => setShowColorPicker(!showColorPicker)}
+                                        className={`w-8 h-8 md:w-9 md:h-9 rounded-xl border transition-all flex items-center justify-center ${showColorPicker ? 'border-white bg-white/10' : 'border-transparent hover:bg-white/5'}`}
+                                    >
+                                        <div className="w-4 h-4 md:w-5 md:h-5 rounded-full" style={{ background: 'linear-gradient(135deg, #f87171, #60a5fa)' }}></div>
+                                    </button>
                                 </div>
 
                                 <div className="pl-1 shrink-0 snap-center">
