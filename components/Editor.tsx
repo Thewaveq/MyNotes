@@ -65,6 +65,7 @@ export const Editor: React.FC<EditorProps> = ({
     };
 
     const colors = [
+        { color: 'inherit', label: 'Стандартный' },
         { color: '#fafafa', label: 'Белый' },
         { color: '#ef4444', label: 'Красный' },
         { color: '#f97316', label: 'Оранжевый' },
@@ -245,7 +246,11 @@ export const Editor: React.FC<EditorProps> = ({
 
     const applyColor = (color: string) => {
         if (editor) {
-            editor.chain().focus().setColor(color).run();
+            if (color === 'inherit') {
+                editor.chain().focus().unsetColor().run();
+            } else {
+                editor.chain().focus().setColor(color).run();
+            }
             setShowColorPicker(false);
         }
     };
