@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import {
+import { 
     Maximize2, Minimize2,
-    Sparkles, Download, Save, Loader2, ChevronLeft,
-    Kanban, Calendar as CalendarIcon,
-    Image as ImageIcon, PenLine
+    Sparkles, Download, Save, Loader2, ChevronLeft, 
+    Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, 
+    SquareCheck, X, PenLine, Kanban, Calendar as CalendarIcon,
+    Link2 as LinkIcon, Image as ImageIcon
 } from 'lucide-react';
-import MDEditor from '@uiw/react-md-editor';
+
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Image from '@tiptap/extension-image';
+import Link from '@tiptap/extension-link';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import Placeholder from '@tiptap/extension-placeholder';
+
 import { Note, AIActionType } from '../types';
 import { AIMenu } from './AIMenu';
 import { streamAIResponse } from '../services/geminiService';
@@ -36,7 +45,7 @@ export const Editor: React.FC<EditorProps> = ({
     const [isGenerating, setIsGenerating] = useState(false);
     const [saving, setSaving] = useState(false);
     
-    // State for text width mode (persisted in localStorage)
+    // Width layout state
     const [isCentered, setIsCentered] = useState(() => {
         if (typeof window !== 'undefined') {
             return localStorage.getItem('editorWidth') === 'centered';
@@ -50,48 +59,115 @@ export const Editor: React.FC<EditorProps> = ({
         localStorage.setItem('editorWidth', newState ? 'centered' : 'full');
     };
 
+    // --- TipTap Editor Setup ---
+    const editor = useEditor({
+        extensions: [
+            StarterKit.configure({
+                heading: { levels: [1, 2, 3] },
+            }),
+            Image.configure({
+                inline: true,
+                allowBase64: true,
+                HTMLAttributes: {
+                    class: 'rounded-lg max-w-full h-auto my-2 border border-white/10 shadow-lg',
+                },
+            }),
+            Link.configure({
+                openOnClick: false, // We handle clicks manually if needed, or let user ctrl+click
+                HTMLAttributes: {
+                    class: 'text-blue-400 underline decoration-blue-400/30 hover:decoration-blue-400 transition-all cursor-pointer',
+                },
+            }),
+            TaskList.configure({
+                HTMLAttributes: {
+                    class: 'not-prose pl-2',
+                },
+            }),
+            TaskItem.configure({
+                nested: true,
+                HTMLAttributes: {
+                    class: 'flex gap-2 items-start my-1',
+                },
+            }),
+            Placeholder.configure({
+                placeholder: 'Начните писать или нажмите "/" для команд...',
+                emptyEditorClass: 'is-editor-empty before:content-[attr(data-placeholder)] before:text-zinc-600 before:float-left before:pointer-events-none before:h-0',
+            }),
+        ],
+        content: note?.content || '',
+        editorProps: {
+            attributes: {
+                class: 'focus:outline-none min-h-[300px] prose prose-invert prose-p:my-1 prose-headings:mb-2 prose-headings:mt-4 prose-ul:my-2 max-w-none text-zinc-300',
+            },
+        },
+        onUpdate: ({ editor }) => {
+            const html = editor.getHTML();
+            if (note) {
+                 onUpdateNote(note.id, { 
+                    content: html,
+                    updatedAt: Date.now()
+                });
+            }
+        },
+    });
+
+    // Sync content when note changes (e.g. switching notes)
+    useEffect(() => {
+        if (editor && note && note.type !== 'board' && note.type !== 'calendar' && note.type !== 'image-board') {
+            const currentContent = editor.getHTML();
+            // Avoid re-rendering loop if content is effectively same
+            if (currentContent !== note.content) {
+                // Only set content if it's significantly different to avoid cursor jumps on small updates
+                // Or better: only set if note ID changed. 
+                // Simple check:
+                editor.commands.setContent(note.content || '');
+            }
+        }
+    }, [note?.id, editor]); // Depend on ID mostly to switch context
+
     const handleManualSave = () => {
         setSaving(true);
         onSave();
         setTimeout(() => setSaving(false), 800);
     };
 
+    const insertImage = () => {
+        const url = window.prompt('Введите URL изображения:');
+        if (url && editor) {
+            editor.chain().focus().setImage({ src: url }).run();
+        }
+    };
+
     const handleAIAction = async (action: AIActionType, prompt?: string) => {
-        if (!note) return;
+        if (!note || !editor) return;
         setIsGenerating(true);
         
-        // В упрощенной версии берем весь текст как контекст, если нет выделения
-        // Библиотека MDEditor позволяет получить ref на textarea, но для простоты
-        // будем работать с текущим content.
-        
-        // TODO: Для улучшения можно добавить получение выделения через ref textarea,
-        // но пока реализуем базовую вставку в конец или генерацию.
-
-        const contextBefore = note.content || "";
-        const selectedText = ""; // Пока без точного выделения
-        const contextAfter = "";
+        // Context
+        const { from, to } = editor.state.selection;
+        const selectedText = editor.state.doc.textBetween(from, to, ' ');
+        const contextBefore = editor.state.doc.textBetween(0, from, ' ');
+        const contextAfter = editor.state.doc.textBetween(to, editor.state.doc.content.size, ' ');
 
         try {
             const stream = await streamAIResponse(selectedText, action, prompt, contextBefore, contextAfter);
             let accumulatedText = "";
             
-            // Если это продолжение текста - добавляем в конец
-            // Если рефакторинг - по хорошему нужно заменять, но пока добавим ниже
-            
-            let newContent = note.content || "";
+            // If replacing selection or continuing
             if (action !== AIActionType.CONTINUE) {
-                newContent += "\n\n--- AI Result ---\n";
+                 // Insert a separator or new block if not replacing
+                 // For now, let's just insert at cursor
             }
 
+            // Create a transaction to insert text live
             for await (const chunk of stream) {
                 const chunkText = (chunk as GenerateContentResponse).text;
                 if (chunkText) {
                     accumulatedText += chunkText;
-                    // Обновляем состояние "на лету"
-                    onUpdateNote(note.id, { 
-                        content: newContent + accumulatedText,
-                        updatedAt: Date.now()
-                    });
+                    // Insert text at current position + offset
+                    // This is complex with streaming. 
+                    // Simpler approach: Collect full text then insert? No, user wants stream.
+                    // We will just insertChunk by chunk.
+                    editor.chain().insertContent(chunkText).run();
                 }
             }
         } catch (error) {
@@ -105,14 +181,8 @@ export const Editor: React.FC<EditorProps> = ({
 
     const handleDownload = () => {
         if (!note) return;
-        
-        const blobType = (note.type === 'board' || note.type === 'calendar' || note.type === 'image-board') 
-            ? 'application/json' 
-            : 'text/markdown';
-            
-        const extension = (note.type === 'board' || note.type === 'calendar' || note.type === 'image-board') 
-            ? 'json' 
-            : 'md';
+        const blobType = (note.type === 'board' || note.type === 'calendar' || note.type === 'image-board') ? 'application/json' : 'text/html';
+        const extension = (note.type === 'board' || note.type === 'calendar' || note.type === 'image-board') ? 'json' : 'html';
 
         const element = document.createElement("a");
         const file = new Blob([note.content], {type: blobType});
@@ -143,6 +213,32 @@ export const Editor: React.FC<EditorProps> = ({
         if (note.type === 'image-board') return <ImageIcon className="text-blue-500 shrink-0" size={20} />;
         return <PenLine className="text-zinc-500 shrink-0" size={20} />;
     };
+
+    // Helper for toolbar buttons
+    const ToolbarBtn = ({ 
+        icon: Icon, 
+        onClick, 
+        isActive = false,
+        disabled = false
+    }: { 
+        icon: any, 
+        onClick: () => void, 
+        isActive?: boolean,
+        disabled?: boolean
+    }) => (
+        <button 
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onClick}
+            disabled={disabled}
+            className={`p-1.5 md:p-2.5 rounded-xl transition-all active:scale-95 ${
+                isActive 
+                    ? 'bg-blue-500/20 text-blue-400' 
+                    : 'text-zinc-400 hover:text-white hover:bg-white/10'
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+            <Icon size={18} className="md:w-5 md:h-5" />
+        </button>
+    );
 
     return (
         <div className={`flex-1 flex flex-col h-full relative bg-transparent min-w-0 overflow-hidden ${className}`}>
@@ -175,13 +271,6 @@ export const Editor: React.FC<EditorProps> = ({
                     <button onClick={handleDownload} className="p-2 md:p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all" title="Скачать">
                         <Download size={20} />
                     </button>
-                    <button 
-                        onClick={() => setAiMenuPos({ top: window.innerHeight / 2 - 150, left: window.innerWidth / 2 - 128 })}
-                        className="p-2 md:p-2.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all" 
-                        title="AI Помощник"
-                    >
-                        <Sparkles size={20} />
-                    </button>
                 </div>
             </div>
 
@@ -190,7 +279,7 @@ export const Editor: React.FC<EditorProps> = ({
                  <div className="flex-1 relative w-full h-full min-h-0 overflow-hidden">
                     <KanbanBoard 
                         note={note} 
-                        onUpdate={(newContent) => onUpdateNote(note.id, { content: newContent, updatedAt: Date.now() })}
+                        onUpdate={(newContent) => onUpdateNote(note.id, { content: newContent, updatedAt: Date.now() })} 
                     />
                 </div>
             ) : note.type === 'calendar' ? (
@@ -208,20 +297,71 @@ export const Editor: React.FC<EditorProps> = ({
                     />
                 </div>
             ) : (
-                <div className={`flex-1 relative overflow-hidden flex flex-col min-h-0 p-4 ${isCentered ? 'max-w-4xl mx-auto w-full' : 'w-full'}`} data-color-mode="dark">
-                    <div className="h-full flex flex-col">
-                        <MDEditor
-                            value={note.content || ''}
-                            onChange={(val) => onUpdateNote(note.id, { content: val || '', updatedAt: Date.now() })}
-                            height="100%"
-                            className="bg-transparent border-none shadow-none"
-                            style={{ backgroundColor: 'transparent', height: '100%' }}
-                            visibleDragbar={false}
-                            preview="live"
-                            extraCommands={[]}
-                        />
+                <>
+                    <div className="flex-1 relative overflow-hidden flex flex-col min-h-0">
+                        <div 
+                            className={`h-full overflow-y-auto px-4 md:px-8 py-6 no-scrollbar transition-all duration-500 ease-in-out ${isCentered ? 'max-w-3xl mx-auto w-full border-x border-white/5 bg-black/20 shadow-2xl' : 'w-full'}`}
+                            onClick={() => editor?.commands.focus()}
+                        >
+                            <EditorContent editor={editor} className="min-h-full" />
+                        </div>
                     </div>
-                </div>
+
+                    {/* Bottom Floating Toolbar - Reconnected to TipTap */}
+                    {editor && (
+                        <div className="w-full z-30 flex justify-center shrink-0 pt-2 pb-6 pointer-events-none bg-transparent absolute bottom-0">
+                            <div className="pointer-events-auto bg-zinc-900/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 rounded-2xl p-2 flex items-center gap-2 max-w-full overflow-x-auto no-scrollbar snap-x snap-mandatory">
+                                
+                                <div className="flex items-center gap-1 md:gap-0.5 pr-2 border-r border-white/10 shrink-0 snap-center">
+                                    <ToolbarBtn 
+                                        icon={Bold} 
+                                        onClick={() => editor.chain().focus().toggleBold().run()} 
+                                        isActive={editor.isActive('bold')} 
+                                    />
+                                    <ToolbarBtn 
+                                        icon={Italic} 
+                                        onClick={() => editor.chain().focus().toggleItalic().run()} 
+                                        isActive={editor.isActive('italic')} 
+                                    />
+                                    {/* TipTap starter kit doesn't have underline by default, usually not md standard, but strikethrough is */}
+                                    <ToolbarBtn 
+                                        icon={Strikethrough} 
+                                        onClick={() => editor.chain().focus().toggleStrike().run()} 
+                                        isActive={editor.isActive('strike')} 
+                                    />
+                                </div>
+
+                                <div className="flex items-center gap-1 md:gap-0.5 px-2 border-r border-white/10 shrink-0 snap-center">
+                                    <ToolbarBtn 
+                                        icon={List} 
+                                        onClick={() => editor.chain().focus().toggleBulletList().run()} 
+                                        isActive={editor.isActive('bulletList')} 
+                                    />
+                                    <ToolbarBtn 
+                                        icon={SquareCheck} 
+                                        onClick={() => editor.chain().focus().toggleTaskList().run()} 
+                                        isActive={editor.isActive('taskList')} 
+                                    />
+                                    <ToolbarBtn 
+                                        icon={ImageIcon} 
+                                        onClick={insertImage} 
+                                    />
+                                </div>
+
+                                <div className="pl-1 shrink-0 snap-center">
+                                    <button 
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => setAiMenuPos({ top: window.innerHeight / 2 - 150, left: window.innerWidth / 2 - 128 })}
+                                        className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-white text-black shadow-lg hover:shadow-white/20 hover:scale-105 transition-all active:scale-95 flex items-center justify-center"
+                                        title="AI Помощник"
+                                    >
+                                        <Sparkles size={16} className="text-black fill-black md:w-[18px] md:h-[18px]" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
 
             <AIMenu 
