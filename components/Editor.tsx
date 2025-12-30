@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Maximize2, Minimize2,
     Sparkles, Download, Save, Loader2, ChevronLeft, 
@@ -18,6 +18,7 @@ import { Color } from '@tiptap/extension-color';
 import TextStyle from '@tiptap/extension-text-style';
 
 import TurndownService from 'turndown';
+import { marked } from 'marked';
 
 import { Note, AIActionType } from '../types';
 import { AIMenu } from './AIMenu';
@@ -147,21 +148,33 @@ export const Editor: React.FC<EditorProps> = ({
         setIsGenerating(true);
         
         const turndownService = new TurndownService();
-        
         const { from, to } = editor.state.selection;
         
-        // Получаем контекст всего документа в Markdown для лучшего понимания ИИ
+        // Context
         const fullHTML = editor.getHTML();
-        const fullMarkdown = turndownService.turndown(fullHTML);
-        
-        // Для точных вставок пока используем текст, но ИИ видит структуру через промпт (если бы мы отправляли fullMarkdown)
-        // В текущей реализации API сервиса принимает contextBefore/After. 
-        // Мы можем передать туда Markdown, если сконвертируем части.
-        // Но для скорости и надежности пока берем текст.
+        // We might use fullMarkdown in future for better context
+        // const fullMarkdown = turndownService.turndown(fullHTML);
         
         const selectedText = editor.state.doc.textBetween(from, to, '\n');
         const contextBefore = editor.state.doc.textBetween(0, from, '\n'); 
         const contextAfter = editor.state.doc.textBetween(to, editor.state.doc.content.size, '\n');
+
+        // Store start position for insertion
+        const insertPos = to; // Insert after selection or replace?
+        // If replacing:
+        // const insertPos = from;
+        
+        // For now let's insert AT cursor (or end of selection) 
+        
+        let accumulatedMarkdown = "";
+        // We need to track the end of the inserted content to replace it next time
+        // But with TipTap transactions, it's easier to just track content length?
+        // Actually, if we use setSelection + insertContent, we can overwrite.
+
+        // Strategy:
+        // 1. Insert an empty node or marker? No.
+        // 2. Just keep track of where we started.
+        let currentTransactionPos = insertPos;
 
         try {
             const stream = await streamAIResponse(selectedText, action, prompt, contextBefore, contextAfter);
@@ -169,7 +182,41 @@ export const Editor: React.FC<EditorProps> = ({
             for await (const chunk of stream) {
                 const chunkText = (chunk as GenerateContentResponse).text;
                 if (chunkText) {
-                    editor.chain().insertContent(chunkText).run();
+                    accumulatedMarkdown += chunkText;
+                    
+                    // Convert MD to HTML
+                    // marked.parse can be async
+                    const html = await marked.parse(accumulatedMarkdown);
+                    
+                    // Replace the previously inserted text with the new full version
+                    // To do this, we select from (original start) to (current end)
+                    // But "current end" moves as we insert.
+                    
+                    // Easier way for streaming formatted text:
+                    // 1. Delete what we inserted last frame (if we can track it).
+                    // 2. Insert the new full HTML.
+                    
+                    // Let's rely on transaction logic.
+                    // We select from `insertPos` to `currentTransactionPos`.
+                    // Then insertContent.
+                    // Then update `currentTransactionPos` to be `insertPos + newContentLength`.
+                    // Wait, `insertContent` with HTML doesn't return the new length easily.
+                    
+                    // Alternative:
+                    // Only insert the NEW chunk as text? No, that breaks formatting (** split).
+                    
+                    // Robast approach:
+                    // Select range [insertPos, currentTransactionPos]
+                    // Insert HTML.
+                    // Update currentTransactionPos = editor.state.selection.to (cursor moves to end of insert)
+                    
+                    editor.chain()
+                        .setTextSelection({ from: insertPos, to: currentTransactionPos })
+                        .insertContent(html)
+                        .run();
+                        
+                    // Update end position for next replace
+                    currentTransactionPos = editor.state.selection.to;
                 }
             }
             
@@ -288,7 +335,7 @@ export const Editor: React.FC<EditorProps> = ({
                  <div className="flex-1 relative w-full h-full min-h-0 overflow-hidden">
                     <KanbanBoard 
                         note={note} 
-                        onUpdate={(newContent) => onUpdateNote(note.id, { content: newContent, updatedAt: Date.now() })}
+                        onUpdate={(newContent) => onUpdateNote(note.id, { content: newContent, updatedAt: Date.now() })} 
                     />
                 </div>
             ) : note.type === 'calendar' ? (
@@ -349,17 +396,17 @@ export const Editor: React.FC<EditorProps> = ({
                                 <div className="flex items-center gap-1 md:gap-0.5 pr-2 border-r border-white/10 shrink-0 snap-center">
                                     <ToolbarBtn 
                                         icon={Bold} 
-                                        onClick={() => editor.chain().focus().toggleBold().run()} 
+                                        onClick={() => editor.chain().focus().toggleBold().run()}
                                         isActive={editor.isActive('bold')} 
                                     />
                                     <ToolbarBtn 
                                         icon={Italic} 
-                                        onClick={() => editor.chain().focus().toggleItalic().run()} 
+                                        onClick={() => editor.chain().focus().toggleItalic().run()}
                                         isActive={editor.isActive('italic')} 
                                     />
                                     <ToolbarBtn 
                                         icon={Strikethrough} 
-                                        onClick={() => editor.chain().focus().toggleStrike().run()} 
+                                        onClick={() => editor.chain().focus().toggleStrike().run()}
                                         isActive={editor.isActive('strike')} 
                                     />
                                 </div>
@@ -367,12 +414,12 @@ export const Editor: React.FC<EditorProps> = ({
                                 <div className="flex items-center gap-1 md:gap-0.5 px-2 border-r border-white/10 shrink-0 snap-center">
                                     <ToolbarBtn 
                                         icon={List} 
-                                        onClick={() => editor.chain().focus().toggleBulletList().run()} 
+                                        onClick={() => editor.chain().focus().toggleBulletList().run()}
                                         isActive={editor.isActive('bulletList')} 
                                     />
                                     <ToolbarBtn 
                                         icon={SquareCheck} 
-                                        onClick={() => editor.chain().focus().toggleTaskList().run()} 
+                                        onClick={() => editor.chain().focus().toggleTaskList().run()}
                                         isActive={editor.isActive('taskList')} 
                                     />
                                 </div>
