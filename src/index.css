@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar if needed, matching previous design style */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+body {
+    background-color: var(--background);
+    color: var(--foreground);
+}
+
+:root {
+  --background: #09090b;
+  --foreground: #fafafa;
+}
