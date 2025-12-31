@@ -215,7 +215,7 @@ export const Editor: React.FC<EditorProps> = ({
         const contextBefore = editor.state.doc.textBetween(0, from, '\n'); 
         const contextAfter = editor.state.doc.textBetween(to, editor.state.doc.content.size, '\n');
 
-        const insertPos = to; 
+        const insertPos = action === AIActionType.CONTINUE ? to : from; 
         
         let accumulatedMarkdown = "";
         let currentTransactionPos = insertPos;
@@ -223,6 +223,10 @@ export const Editor: React.FC<EditorProps> = ({
         try {
             const stream = await streamAIResponse(selectedText, action, prompt, contextBefore, contextAfter);
             
+            if (action !== AIActionType.CONTINUE) {
+                editor.commands.deleteSelection();
+            }
+
             for await (const chunk of stream) {
                 const chunkText = (chunk as GenerateContentResponse).text;
                 if (chunkText) {
@@ -479,6 +483,7 @@ export const Editor: React.FC<EditorProps> = ({
                 onClose={() => setAiMenuPos(null)}
                 onAction={handleAIAction}
                 isGenerating={isGenerating}
+                hasSelection={!editor?.state.selection.empty}
             />
         </div>
     );

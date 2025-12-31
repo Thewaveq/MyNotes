@@ -8,9 +8,10 @@ interface AIMenuProps {
     onAction: (action: AIActionType, prompt?: string) => void;
     onClose: () => void;
     isGenerating: boolean;
+    hasSelection: boolean;
 }
 
-export const AIMenu: React.FC<AIMenuProps> = ({ visible, position, onAction, onClose, isGenerating }) => {
+export const AIMenu: React.FC<AIMenuProps> = ({ visible, position, onAction, onClose, isGenerating, hasSelection }) => {
     const [customPrompt, setCustomPrompt] = React.useState('');
     const [showCustomInput, setShowCustomInput] = React.useState(false);
     const inputRef = React.useRef<HTMLInputElement>(null);
@@ -87,20 +88,35 @@ export const AIMenu: React.FC<AIMenuProps> = ({ visible, position, onAction, onC
                             <Play size={14} /> Продолжить текст
                         </button>
                         <button 
+                            disabled={!hasSelection}
                             onClick={() => onAction(AIActionType.IMPROVE)}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-surface hover:text-white flex items-center gap-2 transition-colors"
+                            className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 transition-colors ${
+                                hasSelection 
+                                    ? 'text-gray-300 hover:bg-surface hover:text-white' 
+                                    : 'text-zinc-600 cursor-not-allowed'
+                            }`}
                         >
                             <Edit3 size={14} /> Улучшить стиль
                         </button>
                         <button 
+                            disabled={!hasSelection}
                             onClick={() => onAction(AIActionType.FIX_GRAMMAR)}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-surface hover:text-white flex items-center gap-2 transition-colors"
+                            className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 transition-colors ${
+                                hasSelection 
+                                    ? 'text-gray-300 hover:bg-surface hover:text-white' 
+                                    : 'text-zinc-600 cursor-not-allowed'
+                            }`}
                         >
                             <CheckCircle size={14} /> Исправить ошибки
                         </button>
                         <button 
+                            disabled={!hasSelection}
                             onClick={() => onAction(AIActionType.SUMMARIZE)}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-surface hover:text-white flex items-center gap-2 transition-colors"
+                            className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 transition-colors ${
+                                hasSelection 
+                                    ? 'text-gray-300 hover:bg-surface hover:text-white' 
+                                    : 'text-zinc-600 cursor-not-allowed'
+                            }`}
                         >
                             <FileText size={14} /> Краткое содержание
                         </button>
