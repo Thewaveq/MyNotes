@@ -7,7 +7,7 @@ import {
     Image as ImageIcon
 } from 'lucide-react';
 
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Extension } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
@@ -16,6 +16,7 @@ import TaskItem from '@tiptap/extension-task-item';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Color } from '@tiptap/extension-color';
 import TextStyle from '@tiptap/extension-text-style';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 
 import TurndownService from 'turndown';
 import { marked } from 'marked';
@@ -37,6 +38,64 @@ interface EditorProps {
     onNavigate?: (id: string) => void;
     className?: string;
 }
+
+// --- Custom Extension for Markdown Copy ---
+const MarkdownClipboard = Extension.create({
+    name: 'markdownClipboard',
+
+    addProseMirrorPlugins() {
+        return [
+            new Plugin({
+                key: new PluginKey('markdownClipboard'),
+                props: {
+                    handleDOMEvents: {
+                        copy: (view, event) => {
+                            const { state } = view;
+                            const { selection } = state;
+                            
+                            // If selection is empty, do nothing (default behavior usually copies line or nothing)
+                            if (selection.empty) return false;
+
+                            // Serialize selection to HTML
+                            const slice = selection.content();
+                            const div = document.createElement('div');
+                            // We use a temporary serializer from the view's schema
+                            const fragment = slice.content;
+                            // TipTap doesn't expose DOMSerializer easily on view directly in public types sometimes, 
+                            // but usually we can use standard DOMSerializer from prosemirror-model
+                            // Simpler: use editor.getHTML() but for selection.
+                            
+                            // Better way with TipTap API:
+                            // We can't easily access `editor` instance here inside the plugin definition 
+                            // unless we pass it or use a closure if defined inside component (not recommended for performance).
+                            
+                            // Let's use the standard DOMSerializer attached to schema
+                            const serializer = view.domSerializer; // TipTap view has this
+                            const content = serializer.serializeFragment(fragment);
+                            div.appendChild(content);
+                            
+                            const html = div.innerHTML;
+
+                            // Convert to Markdown
+                            const turndownService = new TurndownService({
+                                headingStyle: 'atx',
+                                codeBlockStyle: 'fenced'
+                            });
+                            const markdown = turndownService.turndown(html);
+
+                            // Write to clipboard
+                            event.clipboardData?.setData('text/plain', markdown);
+                            event.clipboardData?.setData('text/html', html); // Keep HTML for internal pasting if needed
+                            event.preventDefault(); // Stop default copy
+
+                            return true;
+                        }
+                    }
+                }
+            })
+        ];
+    }
+});
 
 export const Editor: React.FC<EditorProps> = ({ 
     note, 
@@ -106,11 +165,12 @@ export const Editor: React.FC<EditorProps> = ({
                 },
             }),
             Placeholder.configure({
-                placeholder: 'Начните писать или нажмите "/" для команд...', // Corrected escaping for double quote
+                placeholder: 'Начните писать или нажмите "/" для команд...', 
                 emptyEditorClass: 'is-editor-empty before:content-[attr(data-placeholder)] before:text-zinc-600 before:float-left before:pointer-events-none before:h-0',
             }),
             TextStyle,
             Color,
+            MarkdownClipboard, // Add our custom extension
         ],
         content: note?.content || '',
         editorProps: {
@@ -151,30 +211,13 @@ export const Editor: React.FC<EditorProps> = ({
         const turndownService = new TurndownService();
         const { from, to } = editor.state.selection;
         
-        // Context
-        const fullHTML = editor.getHTML();
-        // We might use fullMarkdown in future for better context
-        // const fullMarkdown = turndownService.turndown(fullHTML);
-        
         const selectedText = editor.state.doc.textBetween(from, to, '\n');
         const contextBefore = editor.state.doc.textBetween(0, from, '\n'); 
         const contextAfter = editor.state.doc.textBetween(to, editor.state.doc.content.size, '\n');
 
-        // Store start position for insertion
-        const insertPos = to; // Insert after selection or replace?
-        // If replacing:
-        // const insertPos = from;
-        
-        // For now let's insert AT cursor (or end of selection) 
+        const insertPos = to; 
         
         let accumulatedMarkdown = "";
-        // We need to track the end of the inserted content to replace it next time
-        // But with TipTap transactions, it's easier to just track content length?
-        // Actually, if we use setSelection + insertContent, we can overwrite.
-
-        // Strategy:
-        // 1. Insert an empty node or marker? No.
-        // 2. Just keep track of where we started.
         let currentTransactionPos = insertPos;
 
         try {
@@ -185,38 +228,13 @@ export const Editor: React.FC<EditorProps> = ({
                 if (chunkText) {
                     accumulatedMarkdown += chunkText;
                     
-                    // Convert MD to HTML
-                    // marked.parse can be async
                     const html = await marked.parse(accumulatedMarkdown);
-                    
-                    // Replace the previously inserted text with the new full version
-                    // To do this, we select from (original start) to (current end)
-                    // But "current end" moves as we insert.
-                    
-                    // Easier way for streaming formatted text:
-                    // 1. Delete what we inserted last frame (if we can track it).
-                    // 2. Insert the new full HTML.
-                    
-                    // Let's rely on transaction logic.
-                    // We select from `insertPos` to `currentTransactionPos`.
-                    // Then insertContent.
-                    // Then update `currentTransactionPos` to be `insertPos + newContentLength`.
-                    // Wait, `insertContent` with HTML doesn't return the new length easily.
-                    
-                    // Alternative:
-                    // Only insert the NEW chunk as text? No, that breaks formatting (** split).
-                    
-                    // Robast approach:
-                    // Select range [insertPos, currentTransactionPos]
-                    // Insert HTML.
-                    // Update currentTransactionPos = editor.state.selection.to (cursor moves to end of insert)
                     
                     editor.chain()
                         .setTextSelection({ from: insertPos, to: currentTransactionPos })
                         .insertContent(html)
                         .run();
                         
-                    // Update end position for next replace
                     currentTransactionPos = editor.state.selection.to;
                 }
             }
